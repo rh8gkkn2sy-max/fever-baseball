@@ -647,13 +647,13 @@ function captainLines(){
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
-const VP={map:{},loading:{},clips:{}}, VOICE_VER=1;
+const VP={map:{},loading:{},clips:{}}, VOICE_VER=2;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
-  return VP.loading[name]=fetch(`voice/${name}.bin?v=${VOICE_VER}`).then(r=>r.ok?r.arrayBuffer():null).then(ab=>{ if(!ab) return;
-    const dv=new DataView(ab), n=dv.getUint32(0,true), idx=JSON.parse(new TextDecoder().decode(new Uint8Array(ab,4,n))), base=4+n;
-    for(const k in idx) VP.map[k]={ab,off:base+idx[k][0],len:idx[k][1],buf:null}; }).catch(()=>{});
+  const q=`?v=${VOICE_VER}`;
+  return VP.loading[name]=Promise.all([fetch(`voice/${name}.json${q}`).then(r=>r.ok?r.json():null),fetch(`voice/${name}.mp3${q}`).then(r=>r.ok?r.arrayBuffer():null)]).then(([idx,ab])=>{ if(!idx||!ab) return;
+    for(const k in idx) VP.map[k]={ab,off:idx[k][0],len:idx[k][1],buf:null}; }).catch(()=>{});
 }
 function voicePacksForGame(){
   if(!G||G.attract) return; const T=G.home;
@@ -4958,7 +4958,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010023330', box=document.getElementById('upd');
+  const BUILD='20261010023515', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
