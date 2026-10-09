@@ -198,7 +198,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>新手教學</span><button class="pill" id="setTut">重新開始</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.9（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.0（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -220,7 +220,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 1.9（2026.10.10）</div>
+    <div class="ver">版本 2.0（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -443,7 +443,9 @@ const MUS={cur:null,lastShout:0,duck:1};
 function audioGraph(){
   const c=AU.ctx;
   AU.comp=c.createDynamicsCompressor(); AU.comp.threshold.value=-14; AU.comp.ratio.value=4; AU.comp.attack.value=.004; AU.comp.release.value=.2;
-  AU.comp.connect(c.destination);
+  // brick-wall limiter after the bus compressor so loud chants never clip
+  AU.lim=c.createDynamicsCompressor(); AU.lim.threshold.value=-2.5; AU.lim.knee.value=0; AU.lim.ratio.value=20; AU.lim.attack.value=.001; AU.lim.release.value=.08;
+  AU.comp.connect(AU.lim).connect(c.destination);
   AU.master.disconnect(); AU.master.connect(AU.comp);
   AU.mus=c.createGain(); AU.mus.gain.value=.9; AU.mus.connect(AU.comp);
   // generated stadium impulse response
@@ -2128,21 +2130,27 @@ const FREADY=P({hy:-0.22,sp:[0.5,0,0],lf:[0.3,.08,0.05],rf:[-0.3,.08,0.05],lk:[0
 const FSTAND=P({hy:-0.04,sp:[0.1,0,0],lf:[0.16,.08,0.03],rf:[-0.16,.08,0.03],lh:[0.2,0.95,0.2],rh:[-0.22,0.9,0.1],le:[0.5,1.1,-0.2]});
 const RLEAD=P({hy:-0.2,sp:[0.35,0,0],lf:[0.3,.08,0.0],rf:[-0.3,.08,0.0],lk:[0.5,0.6,1],rk:[-0.5,0.6,1],lh:[0.3,0.8,0.25],rh:[-0.3,0.8,0.25]});
 const WALK=ph=>{ const s=Math.sin(ph), c=Math.cos(ph); return P({hy:-0.03,sp:[0.06,0,0],lf:[0.11,0.08+Math.max(0,s)*0.1,0.05-c*0.28],rf:[-0.11,0.08+Math.max(0,-s)*0.1,0.05+c*0.28],lh:[0.24,0.92,0.04+c*0.14],rh:[-0.24,0.92,0.04-c*0.14]}); };
+// sprint: forward lean, knees driving up in front, heels kicking up behind, elbows at 90 pumping hip-to-chin
 function runPose(ph,lean){
-  const s=Math.sin(ph), c=Math.cos(ph);
-  return P({hy:-0.08+Math.abs(s)*0.05,sp:[lean==null?0.3:lean,s*0.15,0],hr:[0,-s*0.12,0],
-    lf:[0.11,0.08+Math.max(0,s)*0.34,0.05-c*0.45],rf:[-0.11,0.08+Math.max(0,-s)*0.34,0.05+c*0.45],
-    lk:[0.1,0.6,1.3],rk:[-0.1,0.6,1.3],
-    lh:[0.2,1.02,0.1+c*0.3],rh:[-0.2,1.02,0.1-c*0.3],le:[0.35,0.95,-0.55],re:[-0.35,0.95,-0.55]});
+  const s=Math.sin(ph), c=Math.cos(ph), up=x=>Math.max(0,x);
+  const footY=(sn,cs)=>0.08+up(sn)*(0.3+0.22*up(cs))+up(-cs)*up(sn)*0.12;
+  return P({hy:-0.1+Math.abs(s)*0.05,sp:[lean==null?0.38:lean+0.08,s*0.2,0],hr:[0,-s*0.16,0],hd:[-0.12,0,0],
+    lf:[0.11,footY(s,c),0.06-c*0.5],rf:[-0.11,footY(-s,-c),0.06+c*0.5],
+    lk:[0.1,0.6,1.4],rk:[-0.1,0.6,1.4],
+    lh:[0.2,1.08+0.26*up(c),0.12+c*0.34],rh:[-0.2,1.08+0.26*up(-c),0.12-c*0.34],le:[0.32,0.95,-0.6],re:[-0.32,0.95,-0.6]});
 }
+// fielder's throw (the ball leaves at 0.30): transfer, turn the glove side to the target, arm up in the L, stride, release out front, follow through
 const THROWK=[
-  [0.00,P({hy:-0.1,lf:[0.25,.08,0.1],rf:[-0.25,.08,-0.1],lh:[0.2,1.2,0.4],rh:[-0.1,1.2,0.3]})],
-  [0.18,P({hy:-0.15,hr:[0,-0.6,0],sp:[0,-0.4,0],lf:[0.25,.08,0.3],rf:[-0.25,.08,-0.2],lh:[0.3,1.3,0.6],rh:[-0.55,1.65,-0.35],re:[-0.4,1.1,-0.6]})],
-  [0.32,P({hy:-0.2,hr:[0,0.5,0],sp:[0.5,0.4,0],lf:[0.25,.08,0.3],rf:[-0.2,0.2,-0.2],lh:[0.3,0.9,0.1],rh:[0.0,1.2,0.8],re:[-0.5,1.5,0.3]})],
-  [0.6,FSTAND],
+  [0.00,P({hy:-0.12,sp:[0.2,0,0],lf:[0.22,.08,0.08],rf:[-0.22,.08,-0.08],lh:[0.06,1.22,0.36],rh:[-0.04,1.2,0.34],le:[0.45,1.0,0.1],re:[-0.45,1.0,0.1]})],
+  [0.12,P({hy:-0.1,hr:[0,-0.9,0],sp:[0,-0.5,0],lf:[0.12,.08,0.32],rf:[-0.22,.1,-0.2],lh:[0.3,1.36,0.55],le:[0.55,1.2,0.35],rh:[-0.42,1.15,-0.42],re:[-0.35,1.25,-0.6]})],
+  [0.24,P({hz:0.18,hy:-0.18,hr:[0,-0.6,0],sp:[0.08,-0.55,0.08],lf:[0.12,.08,0.7],lk:[0.3,0.6,1.3],rf:[-0.2,.12,-0.25],lh:[0.32,1.42,0.62],le:[0.6,1.15,0.45],rh:[-0.32,1.78,-0.42],re:[-0.6,1.48,-0.32]})],
+  [0.30,P({hz:0.3,hy:-0.22,hr:[0,0.55,0],sp:[0.42,0.35,0],lf:[0.12,.08,0.7],lk:[0.3,0.6,1.3],rf:[-0.18,.2,-0.22],lh:[0.3,1.05,0.05],le:[0.65,1.1,-0.2],rh:[0.02,1.68,0.62],re:[-0.32,1.55,0.36]})],
+  [0.42,P({hz:0.36,hy:-0.25,hr:[0,0.9,0],sp:[0.72,0.45,0],lf:[0.12,.08,0.7],lk:[0.3,0.6,1.3],rf:[-0.05,0.42,-0.3],rk:[-0.1,0.6,0.2],lh:[0.28,0.98,-0.05],le:[0.65,1.1,-0.3],rh:[0.3,0.75,0.42],re:[0.1,1.15,0.6]})],
+  [0.70,FSTAND],
 ];
 const DIVE=P({rx:1.38,lift:0.1,hy:0,sp:[0,0,0],hd:[-0.5,0,0],lh:[0.14,2.2,0.12],rh:[-0.14,2.1,0.05],le:[0.5,1.6,0.4],re:[-0.5,1.6,0.4],lf:[0.12,0.06,-0.08],rf:[-0.16,0.2,-0.3],lk:[0.2,0.5,0.6],rk:[-0.2,0.5,0.6]});
-const LEAP=P({hy:-0.05,sp:[-0.15,0,0],hd:[-0.4,0,0],lh:[0.1,2.3,0.22],rh:[-0.25,1.6,0.1],le:[0.5,1.8,0.2],lf:[0.12,0.38,-0.12],rf:[-0.12,0.18,0.1],lk:[0.2,0.9,1.0],rk:[-0.2,0.9,1.0]});
+// leaping catch: glove stretched high, body arched, one knee driving up, the other leg trailing
+const LEAP=P({hy:-0.02,sp:[-0.22,0,0.12],hd:[-0.55,0,0.1],lh:[0.08,2.42,0.2],le:[0.42,1.9,0.15],rh:[-0.35,1.55,0.0],re:[-0.6,1.4,-0.2],lf:[0.12,0.58,0.22],lk:[0.15,1.0,1.4],rf:[-0.1,0.3,-0.35],rk:[-0.15,0.5,0.4]});
 // feet-first slide: leaning back on the hip, lead leg reaching for the bag, hands up out of the way
 const SLIDE_F=P({rx:-1.05,hy:-0.08,sp:[0.35,0,0.15],hd:[0.55,0,0],lf:[0.08,0.24,0.8],lk:[0.1,0.5,1.4],rf:[-0.2,0.12,0.18],rk:[-0.3,0.6,0.8],lh:[0.32,1.25,-0.25],rh:[-0.35,1.5,-0.1],le:[0.6,1.4,-0.3],re:[-0.6,1.6,-0.2]});
 const RECV=P({hy:-0.08,sp:[0.15,0,0],lh:[0.15,1.35,0.5],rh:[-0.15,1.3,0.45],le:[0.5,1.0,0.2],re:[-0.5,1.0,0.2],lf:[0.25,.08,0.1],rf:[-0.2,.08,-0.1]});
@@ -5043,7 +5051,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010030127', box=document.getElementById('upd');
+  const BUILD='20261010030623', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
