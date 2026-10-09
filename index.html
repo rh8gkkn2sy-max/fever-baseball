@@ -198,7 +198,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>新手教學</span><button class="pill" id="setTut">重新開始</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.8（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.9（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -220,7 +220,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 1.8（2026.10.10）</div>
+    <div class="ver">版本 1.9（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -572,7 +572,7 @@ setInterval(()=>{
   const c=AU.ctx; if(!c||!AU.on||typeof G==='undefined'||!G||!AU.mus){ MUS.cur=null; return; }
   const want=musicMode();
   if(!want){ MUS.cur=null; return; }
-  if(!MUS.cur||MUS.cur.key!==want.key){ const t0=c.currentTime+.06; MUS.cur={song:want.song,key:want.key,t0,next:t0,step:0}; }
+  if(!MUS.cur||MUS.cur.key!==want.key){ const t0=c.currentTime+.06; MUS.cur={song:want.song,key:want.key,t0,next:t0,step:0}; prepSongClips(want.song); }
   const m=MUS.cur, d16=60/m.song.bpm/4;
   const mv=(SAVE.settings&&SAVE.settings.music!=null?SAVE.settings.music:80)/100;
   AU.mus.gain.setTargetAtTime(.9*want.vol*MUS.duck*mv*1.25,c.currentTime,.06);
@@ -644,10 +644,15 @@ function captainLines(){
     all.filter(t=>/\{n\}/.test(t)).forEach(t=>add(k,fillT(t,{n:p.short||p.name})));
     (p.lyrics||[p.chant]).filter(Boolean).forEach(l=>add(k,l));
     chanceLyrics(p,TEAMS[p.homeTeam]).forEach(l=>add(k,l)); });
+  // call-and-response: the captain's call and the stands' answer (C| = crowd)
+  ['全壘打！','安打！','得分！','三振！'].forEach(t=>add('common',t));
+  ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！'].forEach(t=>add('common','C|'+t));
+  TEAMS.forEach(T=>add('t-'+T.id,'C|'+T.name+'！'));
+  ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id, n=p.short||p.name; if(p.role) add(k,n+'加油！'); else { add(k,n+'！'); add(k,'C|'+n+'！'); } });
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
-const VP={map:{},loading:{},clips:{}}, VOICE_VER=2;
+const VP={map:{},loading:{},clips:{}}, VOICE_VER=3;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
@@ -750,45 +755,99 @@ function sylSteps(n){
   if(n<=12){ const a=[0,2,4,6,8,9,10,11,12,13,14,15]; return a.slice(0,n); }
   return Array.from({length:Math.min(n,16)},(_,i)=>i);
 }
+// scale-degree shapes for the four lines: rise, answer, rise higher, come home (0-4 = 1 2 3 5 6, 5+ next octave)
+const CONTOURS=[
+  [[0,0,2,3,3,4,3],[4,3,2,1,2,0],[0,0,2,3,3,5],[5,4,3,2,1,0]],
+  [[2,3,4,5,4,3],[3,2,1,2,3],[2,3,4,5,6,5],[4,3,2,1,0]],
+  [[0,2,3,0,2,3],[4,3,2,3],[0,2,3,5,4,3],[2,1,1,0]],
+  [[3,3,4,3,2,3],[2,1,0,1,2],[3,3,4,5,4,3],[2,3,1,0]],
+  [[0,1,2,3,4,3,2],[1,2,3,2,1],[0,1,2,3,4,5],[4,3,2,1,0]],
+  [[5,4,3,4,5],[3,2,1,2,3],[5,4,3,4,5,6],[5,3,2,1,0]],
+  [[2,2,3,2,2,3],[4,4,3,2],[2,2,3,5,5,6],[5,4,2,0]],
+];
 function makeSong(seed,o){
   const r=seeded(seed), prog=o.minor?PROG_MIN:PROG_MAJ, scale=o.minor?PENT_MIN:PENT_MAJ, base=o.key+12;
   const motif=[RHY[Math.floor(r()*RHY.length)],RHY[Math.floor(r()*RHY.length)]];
   const mel=new Array(64).fill(null), syl=[], lyr=[]; let prev=base+4;
+  const contour=CONTOURS[Math.floor(r()*CONTOURS.length)];
   for(let b=0;b<4;b++){
     let steps;
     if(o.lyrics&&o.lyrics[b]){ lyr[b]=syllables(o.lyrics[b]); steps=sylSteps(lyr[b].length); }
     else if(!o.lyrics&&b===2){ for(let s=0;s<16;s++) mel[32+s]=mel[s]; continue; }
     else { steps=[]; const rh=motif[b%2]; for(let s=0;s<16;s++) if(rh[s]==='x') steps.push(s); }
     syl[b]=steps;
-    const [cr,cq]=prog[b], tones=chordT(base+cr,cq).concat(chordT(base+cr+12,cq));
-    steps.forEach((s,j)=>{
-      let n;
-      if(s%4===0||j===0){ n=tones.reduce((a,c)=>Math.abs(c-prev)<Math.abs(a-prev)?c:a,tones[0]); }
-      else { const cand=[]; for(let oc=0;oc<2;oc++) scale.forEach(d=>cand.push(base+oc*12+d)); const near=cand.filter(c=>Math.abs(c-prev)<=5&&c!==prev); n=near.length?near[Math.floor(r()*near.length)]:prev; }
-      mel[b*16+s]=n; prev=n;
-    });
+    const c=contour[b], dg=d=>base+Math.floor(d/5)*12+scale[((d%5)+5)%5];
+    steps.forEach((s,j)=>{ const n=dg(c[Math.round(j*(c.length-1)/Math.max(1,steps.length-1))]); mel[b*16+s]=n; prev=n; });
   }
   for(let s=63;s>=48;s--) if(mel[s]!=null){ mel[s]=base; break; }
   if(o.fixed) o.fixed.forEach(([s,n])=>mel[s]=n);
   const len=mel.map((n,i)=>{ if(n==null) return 0; let k=1; while(i+k<64&&mel[i+k]==null&&k<4) k++; return k; });
-  return {bpm:o.bpm,key:o.key,minor:!!o.minor,style:o.style||'brass',lead:o.lead||'brass',pat:o.pat||[1,0,1,0,1,1,1,0],mel,len,prog,syl,lyr,id:seed};
+  return {bpm:o.bpm,key:o.key,minor:!!o.minor,style:o.style||'brass',lead:o.lead||'brass',pat:o.pat||[1,0,1,0,1,1,1,0],mel,len,prog,syl,lyr,id:seed,sec:!!o.calls,calls:o.calls,chant:o.chant};
 }
+const cKey=t=>'C'+voiceKey(t);
+function callSet(lead,crowd){ return [voiceKey(lead),cKey(crowd),lead]; }
 function songFor(kind,p,T){
   const k=kind+'|'+(p?p.id:'')+'|'+(T?T.id:'');
   if(SONGS[k]) return SONGS[k];
   const tm=TEAM_MUSIC[T.id]||TEAM_MUSIC.TB, key=TEAM_KEY[T.id]||60;
   let s;
-  if(kind==='player'){ const sg=p.song||{}; s=makeSong(hashStr(p.id),{key:key+(sg.shift||0),bpm:sg.bpm||132,minor:!!sg.minor,style:tm.style,pat:sg.pat,lyrics:p.lyrics}); s.lead=tm.leads[hashStr(p.id+'L')%tm.leads.length]; }
-  else if(kind==='chance') s=makeSong(hashStr(p.id+'c'),{key:key-3,bpm:150,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,1,1,0,1,1,1,0],lyrics:chanceLyrics(p,T)});
+  const n=p&&(p.short||p.name), big=p&&p.pow>.62;
+  if(kind==='player'){ const sg=p.song||{}; s=makeSong(hashStr(p.id),{key:key+(sg.shift||0),bpm:Math.max(140,sg.bpm||140),minor:!!sg.minor,style:tm.style,pat:sg.pat,lyrics:p.lyrics,
+      calls:[callSet(n+'！',n+'！'),callSet(big?'全壘打！':'安打！',big?'全壘打！':'安打！')],chant:[cKey(n+'！'),cKey(big?'全壘打！':'安打！')]}); s.lead=tm.leads[hashStr(p.id+'L')%tm.leads.length]; }
+  else if(kind==='chance') s=makeSong(hashStr(p.id+'c'),{key:key-3,bpm:154,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,1,1,0,1,1,1,0],lyrics:chanceLyrics(p,T),
+      calls:[callSet(n+'！',n+'！'),callSet('得分！','得分！')],chant:[cKey(n+'！'),cKey('得分！')]});
   else if(kind==='anthem') s=makeSong(hashStr(T.id+'anthem'),{key,bpm:132,style:tm.style,lead:tm.leads[0]});
   else if(kind==='lucky') s=makeSong(hashStr(T.id+'lucky'),{key,bpm:132,style:tm.style,lead:tm.leads[0]});
   else if(kind==='win') s=makeSong(hashStr(T.id+'win'),{key,bpm:148,style:tm.style,lead:tm.leads[0]});
   else if(kind==='closer') s=makeSong(hashStr(T.id+'closer'),{key:key-3,bpm:136,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,0,1,1,1,0,1,1]});
-  else if(kind==='defense') s=makeSong(hashStr(T.id+'def'),{key:key-5,bpm:120,style:tm.style,lead:tm.leads[1],pat:[1,0,0,0,1,0,1,0]});
+  else if(kind==='defense'){ const pn=p?(p.short||p.name):''; s=makeSong(hashStr(T.id+'def'),{key:key-5,bpm:128,style:tm.style,lead:tm.leads[1],pat:[1,0,0,0,1,0,1,0],
+      calls:[callSet(pn+'加油！','加油！'),callSet('三振！','三振！')],chant:[cKey('好球！'),cKey('三振！')]}); }
   else if(kind==='k'){ const b=key+12, hits=[0,4,8,16,20,24,28,32,36,40,48,52,56]; s=makeSong(hashStr(T.id+'k'),{key,bpm:140,style:'k',lead:tm.leads[0],pat:[1,0,1,0,1,0,1,1],fixed:[[0,b+7],[4,b+7],[8,b+12],[16,b+7],[20,b+7],[24,b+12],[28,b+14],[32,b+7],[36,b+7],[40,b+12],[48,b+12],[52,b+14],[56,b+16]]}); for(let i=0;i<64;i++) if(!hits.includes(i)) s.mel[i]=null; s.len=s.mel.map(n=>n==null?0:3); }
   SONGS[k]=s; return s;
 }
+// a clip on the beat: leader voices go dry and loud, the crowd through the stadium reverb
+function clipBuf(k){ const e=VP.map[k]; if(!e) return null; if(e.buf) return e.buf; if(!e.dec&&AU.ctx) e.dec=AU.ctx.decodeAudioData(e.ab.slice(e.off,e.off+e.len)).then(b=>{ e.buf=b; }).catch(()=>{}); return null; }
+function playAt(k,t,gain,lead,txt){
+  if(SAVE.settings.voice===false&&lead) return false; const b=clipBuf(k); if(!b) return false;
+  const c=AU.ctx, s=c.createBufferSource(), g=c.createGain(); s.buffer=b; g.gain.value=gain; s.connect(g); g.connect(AU.master);
+  if(!lead){ const r=c.createGain(); r.gain.value=.45; g.connect(r); r.connect(AU.revIn); }
+  s.start(Math.max(t,c.currentTime));
+  if(lead&&txt) setTimeout(()=>{ if(G&&!G.attract) G.shout={txt,t:0}; },Math.max(0,(t-c.currentTime)*1000));
+  MUS.duck=Math.min(MUS.duck,.55); clearTimeout(MUS.duckT2); MUS.duckT2=setTimeout(()=>{ MUS.duck=1; },(t-c.currentTime+b.duration)*1000+80);
+  return true;
+}
+function prepSongClips(s){ if(!s||!s.sec) return; s.calls.forEach(c=>{ clipBuf(c[0]); clipBuf(c[1]); }); s.chant.forEach(clipBuf); clipBuf(cKey('嘿！')); }
+function playCall(s,bar,st,t,v){
+  const d16=60/s.bpm/4, root=s.key+s.prog[0][0], c=s.calls[bar];
+  if(st===0){ INS.kick(t,.9*v); INS.taiko(t,.75*v); if(bar===0) INS.crash(t,.28*v); playAt(c[0],t,1.6,true,c[2]); }
+  if(st===8){ INS.kick(t,.9*v); INS.taiko(t,.85*v); playAt(c[1],t,1.15); }
+  if(st===12) INS.taiko(t,.55*v);
+  if(st%4===0) INS.hat(t,.05*v);
+  if(st===0||st===8) INS.bass(t,midiF(root-12),d16*3,.15*v);
+}
+function playChant(s,bar,st,t,v){
+  const d16=60/s.bpm/4, root=s.key+s.prog[3][0];
+  if(bar===0){
+    // 咚、咚咚 on the off-beat under the stands chanting the name
+    if([0,6,8,14].includes(st)) INS.taiko(t,.8*v);
+    if(st===0||st===8){ INS.kick(t,.8*v); playAt(s.chant[0],t,1.15); }
+    if(st===4||st===12) INS.clap(t,.45*v);
+  }else{
+    if(st===0){ INS.kick(t,.9*v); INS.crash(t,.3*v); playAt(s.chant[1],t,1.2); }
+    if(st===8||st===10||st===12){ INS.kick(t,1*v); INS.taiko(t,.95*v); INS.snare(t,.4*v); }
+    if(st===14) playAt(cKey('嘿！'),t,1.05);
+  }
+  if(st%2===0) INS.hat(t,.04*v);
+  if(st%4===0) INS.bass(t,midiF(root-12),d16*2,.12*v);
+}
 function playStep(s,i,t,v){
+  if(s.sec){ const b8=Math.floor(i/16)%8, st0=i%16;
+    if(b8<2) return playCall(s,b8,st0,t,v);
+    if(b8>=6) return playChant(s,b8-6,st0,t,v);
+    i=(b8-2)*16+st0;
+    if(st0===4||st0===12) INS.clap(t,.28*v);
+    if(b8===5&&st0===12) playAt(cKey('嘿！'),t,.95);
+  }
   const st=i%16, bar=Math.floor(i/16)%4, d16=60/s.bpm/4, [cr,cq]=s.prog[bar], root=s.key+cr, ch=chordT(root+12,cq).map(midiF);
   switch(s.style){
     case 'edm':
@@ -862,7 +921,8 @@ function playStep(s,i,t,v){
 function karaoke(){
   const w=G&&!G.attract?musicMode():null; if(!w||!w.song.syl||!w.song.lyr||!w.song.lyr.length) return null;
   const st=Math.floor(G.beatPos*4); if(st<0) return null;
-  const bar=Math.floor(st/16)%4, s=st%16, pos=w.song.syl[bar]||[];
+  let bar=Math.floor(st/16)%4; if(w.song.sec){ const b8=Math.floor(st/16)%8; if(b8<2||b8>5) return null; bar=b8-2; }
+  const s=st%16, pos=w.song.syl[bar]||[];
   let n=0; for(const p of pos) if(p<=s) n++;
   return {bar,n,song:w.song,lines:w.song.lyr};
 }
@@ -1829,7 +1889,7 @@ function makePompom(c1,c2,glow){
 function makeCheer(T,mem,lead){
   const Q=T.squad, st=Q.style, f=makeRig(L_CHEER), skinHex='#EDC0A2', skin=M(skinHex,{roughness:.55});
   f.root.scale.setScalar(1.03);
-  f.springMul={lh:1.7,rh:1.7,le:1.3,re:1.3,hd:.85,sp:.6,hr:.55,hx:.55,hy:.8,hz:.6,lf:1.2,rf:1.2,lift:1.1};
+  f.springMul={lh:1.5,rh:1.5,le:1.3,re:1.3,hd:1,sp:.8,hr:.8,hx:.8,hy:1.3,hz:.8,lf:1.4,rf:1.4,lift:1.3};
   f.kind='cheer'; f.spring=(SPRING_STYLE[st]||[4.5,.55]).slice(); f.var={dt:(rnd()-.5)*0.07,amp:.88+rnd()*.24};
   mesh(lathe([[.108,0],[.099,.05],[.093,.11],[.101,.17],[.117,.22],[.121,.26],[.111,.30],[.117,.335],[.128,.36],[.118,.395],[.055,.43]],28),new THREE.MeshStandardMaterial({map:cheerTorsoTex(T,Q,st),roughness:.5,emissive:Q.glow?col(Q.trim):0x000000,emissiveIntensity:Q.glow?.12:0}),f.spine,0,0,0,false);
   mesh(GEO.pelvis,M(Q.bottom),f.hips,0,0.0,0,false).scale.set(.9,.85,.78);
@@ -2017,11 +2077,20 @@ function drive(f,target,dt){
    ========================================================= */
 /* Pitcher (root-local: +x toward home, +z = his front, right-handed; lefties are mirrored) */
 const PK=[
+  // set: hands together at the chest
   [0.00,P({hy:-0.02,lf:[0.22,.08,0.02],rf:[-0.2,.08,0],lh:[0.04,1.24,0.27],rh:[-0.02,1.22,0.26],le:[0.4,1.0,0.1],re:[-0.4,1.0,0.1],hd:[0,1.25,0]})],
-  [0.35,P({hr:[0,-0.28,0],sp:[-0.06,-0.12,0],lf:[0.04,0.64,0.2],lk:[0.1,1.2,1.0],rf:[-0.18,.08,0],lh:[0.0,1.27,0.25],rh:[-0.03,1.25,0.24],le:[0.4,1.0,0.1],re:[-0.4,1.0,0.1],hd:[0,1.3,0]})],
-  [0.62,P({hx:0.5,hy:-0.2,hr:[0,-0.15,0.05],sp:[0.05,-0.2,0.1],lf:[1.3,.08,0.06],lk:[1.0,0.6,0.4],rf:[-0.18,.1,0],rk:[-0.1,0.5,0.8],lh:[0.95,1.42,0.15],le:[0.6,1.0,0.5],rh:[-0.45,1.72,-0.12],re:[-0.4,1.15,-0.55],hd:[0,1.3,0]})],
-  [0.82,P({hx:0.75,hy:-0.26,hr:[0,0.9,0],sp:[0.35,0.5,0],lf:[1.3,.08,.06],lk:[1.0,0.6,0.4],rf:[-0.1,.2,-0.05],rk:[0.2,0.4,0.8],lh:[0.85,1.05,-0.15],le:[1.0,1.2,-0.4],rh:[1.15,1.78,0.38],re:[0.55,1.6,0.95],hd:[0,0.6,0]})],
-  [1.00,P({hx:0.85,hy:-0.32,hr:[0,1.4,0],sp:[0.7,0.5,0],lf:[1.3,.08,.06],lk:[1.0,0.6,0.4],rf:[0.4,0.35,-0.3],rk:[0.6,0.5,0],lh:[0.9,0.95,-0.2],le:[1.1,1.1,-0.5],rh:[1.25,0.55,-0.4],re:[1.0,1.2,0.4],hd:[0,0.3,0]})],
+  // leg lift: front knee to the belt, hips turned away, a touch of back lean
+  [0.22,P({hy:0,hr:[0,-0.35,0],sp:[-0.08,-0.18,0],lf:[0.02,0.66,0.16],lk:[0.12,1.22,1.0],rf:[-0.18,.08,0],rk:[-0.1,0.5,1.0],lh:[0.0,1.3,0.24],rh:[-0.04,1.28,0.23],le:[0.4,1.05,0.1],re:[-0.4,1.05,0.1],hd:[0,1.3,0]})],
+  // drift and drive: hips lead toward the plate, the hands break
+  [0.42,P({hx:0.28,hy:-0.12,hr:[0,-0.3,0.04],sp:[-0.02,-0.25,0.06],lf:[0.75,0.3,0.06],lk:[0.9,0.9,0.6],rf:[-0.18,.08,0],rk:[-0.05,0.5,0.9],lh:[0.7,1.32,0.18],le:[0.45,1.1,0.45],rh:[-0.48,1.02,-0.2],re:[-0.35,1.2,-0.4],hd:[0,1.3,0]})],
+  // foot plant: long stride, glove arm points home, throwing arm up in the high-cocked L
+  [0.60,P({hx:0.55,hy:-0.26,hr:[0,-0.08,0.05],sp:[0.04,-0.28,0.1],lf:[1.32,.08,0.06],lk:[1.05,0.6,0.4],rf:[-0.16,.1,0],rk:[-0.1,0.45,0.8],lh:[0.98,1.42,0.18],le:[0.62,1.08,0.48],rh:[-0.36,1.76,-0.26],re:[-0.58,1.46,-0.42],hd:[0,1.3,0]})],
+  // layback: hips fire open, chest turns, the ball lags behind the head
+  [0.73,P({hx:0.7,hy:-0.28,hr:[0,0.9,0],sp:[0.22,0.32,0.08],lf:[1.32,.08,.06],lk:[1.05,0.6,0.4],rf:[-0.12,.16,-0.04],rk:[0.15,0.4,0.8],lh:[0.62,1.12,-0.12],le:[0.9,1.15,-0.35],rh:[-0.12,1.86,-0.32],re:[-0.4,1.56,0.2],hd:[0,0.75,0]})],
+  // release: out in front, trunk tilting over the front knee
+  [0.83,P({hx:0.82,hy:-0.31,hr:[0,1.3,0],sp:[0.48,0.55,0],lf:[1.32,.08,.06],lk:[1.05,0.6,0.4],rf:[-0.05,.24,-0.06],rk:[0.25,0.4,0.8],lh:[0.82,1.0,-0.22],le:[1.0,1.15,-0.45],rh:[1.22,1.74,0.34],re:[0.62,1.56,0.6],hd:[0,0.45,0]})],
+  // follow-through: arm finishes across to the glove-side knee, back leg swings around
+  [1.00,P({hx:0.88,hy:-0.34,hr:[0,1.5,0],sp:[0.82,0.5,0],lf:[1.32,.08,.06],lk:[1.0,0.6,0.4],rf:[0.42,0.42,-0.3],rk:[0.6,0.5,0],lh:[0.88,0.98,-0.24],le:[1.1,1.1,-0.5],rh:[1.05,0.6,-0.42],re:[1.0,1.2,0.4],hd:[0,0.3,0]})],
 ];
 const PK_L=PK.map(([t,p])=>[t,mirrorPose(p)]);
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
@@ -2074,6 +2143,8 @@ const THROWK=[
 ];
 const DIVE=P({rx:1.38,lift:0.1,hy:0,sp:[0,0,0],hd:[-0.5,0,0],lh:[0.14,2.2,0.12],rh:[-0.14,2.1,0.05],le:[0.5,1.6,0.4],re:[-0.5,1.6,0.4],lf:[0.12,0.06,-0.08],rf:[-0.16,0.2,-0.3],lk:[0.2,0.5,0.6],rk:[-0.2,0.5,0.6]});
 const LEAP=P({hy:-0.05,sp:[-0.15,0,0],hd:[-0.4,0,0],lh:[0.1,2.3,0.22],rh:[-0.25,1.6,0.1],le:[0.5,1.8,0.2],lf:[0.12,0.38,-0.12],rf:[-0.12,0.18,0.1],lk:[0.2,0.9,1.0],rk:[-0.2,0.9,1.0]});
+// feet-first slide: leaning back on the hip, lead leg reaching for the bag, hands up out of the way
+const SLIDE_F=P({rx:-1.05,hy:-0.08,sp:[0.35,0,0.15],hd:[0.55,0,0],lf:[0.08,0.24,0.8],lk:[0.1,0.5,1.4],rf:[-0.2,0.12,0.18],rk:[-0.3,0.6,0.8],lh:[0.32,1.25,-0.25],rh:[-0.35,1.5,-0.1],le:[0.6,1.4,-0.3],re:[-0.6,1.6,-0.2]});
 const RECV=P({hy:-0.08,sp:[0.15,0,0],lh:[0.15,1.35,0.5],rh:[-0.15,1.3,0.45],le:[0.5,1.0,0.2],re:[-0.5,1.0,0.2],lf:[0.25,.08,0.1],rf:[-0.2,.08,-0.1]});
 // closer on the mound: fist to the sky
 const CL_POSE=P({hy:-0.02,sp:[-0.08,0,0],hd:[-0.25,0,0],lf:[0.16,.08,0.03],rf:[-0.16,.08,0.03],rh:[-0.22,2.12,0.1],re:[-0.6,1.6,-0.2],lh:[0.24,1.0,0.2],le:[0.6,1.1,0]});
@@ -2129,33 +2200,37 @@ Object.assign(CH,{
 const K_SEQ=['KSTOMP','KSTOMP','KPOSE','KPOSE2','PUMP','PUMP','KPOSE','JUMP'];
 const CHANCE_SEQ=['CLAPUP','CLAPUP','PT_R','PT_L','SHIMMY','WAVE_B','FLIP','JUMP'];
 const DEF_SEQ=['PT_R','PT_L','PUNCHD','CLAPUP','PT_R','PT_L','CROSS','ENDPOSE'];
-const SPRING_STYLE={kpop:[4.4,.5],cute:[3.9,.44],marine:[3.4,.46],idol:[4.1,.47],hiphop:[4.6,.52],cyber:[5.6,.66]};
+const SPRING_STYLE={kpop:[7.2,.62],cute:[6.6,.6],marine:[6.0,.6],idol:[7.0,.6],hiphop:[7.6,.64],cyber:[8.6,.7]};
 // Idol choreography: each count sets a target pose (switched a hair early so it lands on the beat);
 // a light groove sits on top — hip sway, counter shoulders, head nods, a soft knee bounce and small steps.
 function dancePose(i,b,routine,style,opt){
   opt=opt||{};
-  const amp=(opt.amp||1)*(opt.sway||1), bnc=opt.bounce||1, bb=b+0.1;
-  const cnt=Math.floor(bb), f=b-Math.floor(b), n=routine.length, c=routine[((cnt%n)+n)%n], C=CH[c]||{};
-  const pose=Object.assign({},STAND,{lh:C.lh||STAND.lh,rh:C.rh||STAND.rh,le:C.le||STAND.le,re:C.re||STAND.re});
-  const acc=Math.exp(-f*6), g=Math.sin(b*Math.PI), g2=Math.sin(b*Math.PI*2);
-  pose.hy=(C.hy||0)-0.02-0.035*acc*bnc;
-  pose.hx=(C.hx||0)+0.04*g*amp;
-  pose.hr=[(C.hr?C.hr[0]:0)+0.03*acc,(C.hr?C.hr[1]:0)+0.1*g*amp,(C.hr?C.hr[2]:0)+0.06*g*amp];
-  pose.sp=[(C.sp?C.sp[0]:0)+0.035*acc,(C.sp?C.sp[1]:0)-0.06*g*amp,(C.sp?C.sp[2]:0)-0.03*g*amp];
-  pose.hd=[(C.hd?C.hd[0]:0)+0.06*acc,(C.hd?C.hd[1]:0)+0.07*g,(C.hd?C.hd[2]:0)+0.04*g2];
-  const w=0.1, step=Math.max(0,Math.sin(f*Math.PI))*0.06;
-  pose.lf=C.lf||[w+0.04*g,0.08+(g<0?step:0),0.03+(cnt%2?0.06:0)]; pose.rf=C.rf||[-w+0.04*g,0.08+(g>0?step:0),0.03+(cnt%2?0:0.06)];
-  pose.lk=[w+0.06,0.6,1.2]; pose.rk=[-w-0.06,0.6,1.2];
+  const amp=(opt.amp||1)*(opt.sway||1), bnc=opt.bounce||1, bb=b+0.08;
+  const cnt=Math.floor(bb), f=bb-cnt, n=routine.length, c=routine[((cnt%n)+n)%n], pc=routine[(((cnt-1)%n)+n)%n], C=CH[c]||{}, PC=CH[pc]||{};
+  // hit and hold: snap to the new shape in the first fifth of the beat with a small overshoot, then hold it
+  const u=clamp(f/0.2,0,1), hit=u<1?1+2.7*Math.pow(u-1,3)+1.7*Math.pow(u-1,2):1, mix=(a,b2)=>a&&b2?a.map((v,k)=>v+(b2[k]-v)*hit):(b2||a);
+  const arm=k=>mix(PC[k]||STAND[k],C[k]||STAND[k]);
+  const pose=Object.assign({},STAND,{lh:arm('lh'),rh:arm('rh'),le:arm('le'),re:arm('re')});
+  const acc=Math.exp(-f*7), side=cnt%2?1:-1, sw=0.5-0.5*Math.cos(clamp(f/0.35,0,1)*Math.PI), sd=side*sw+(-side)*(1-sw);
+  // down-groove: the knees give on every beat; the hands ride along with the body
+  const groove=Math.pow(0.5+0.5*Math.cos(f*Math.PI*2),1.4);
+  pose.hy=(C.hy||0)-0.04-0.11*groove*bnc;
+  // step-touch: weight shifts to one foot each beat, the hips pop toward it, shoulders answer
+  pose.hx=(C.hx||0)+0.065*sd*amp;
+  pose.hr=[(C.hr?C.hr[0]:0)+0.06*acc,(C.hr?C.hr[1]:0)+0.14*sd*amp,(C.hr?C.hr[2]:0)+0.15*sd*amp];
+  pose.sp=[(C.sp?C.sp[0]:0)-0.09*acc,(C.sp?C.sp[1]:0)-0.08*sd*amp,(C.sp?C.sp[2]:0)-0.07*sd*amp];
+  pose.hd=[(C.hd?C.hd[0]:0)+0.13*acc-0.04,(C.hd?C.hd[1]:0)+0.06*sd,(C.hd?C.hd[2]:0)-0.07*sd];
+  const wf=0.16, tap=Math.max(0,Math.sin(f*Math.PI))*0.06; const w=0.12;
+  const plant=[wf*Math.sign(sd||1)*0.9,0.08,0.02], toe=[-wf*Math.sign(sd||1)*0.35,0.08+tap,0.1];
+  pose.lf=C.lf||(sd>=0?plant:toe).slice(); pose.rf=C.rf||(sd>=0?toe:plant).slice();
+  if(!C.lf&&!C.rf){ if(sd>=0) pose.rf=[-Math.abs(pose.rf[0])-0.04,pose.rf[1],pose.rf[2]]; else pose.lf=[Math.abs(pose.lf[0])+0.04,pose.lf[1],pose.lf[2]]; }
+  pose.lk=[0.16,0.6,1.4]; pose.rk=[-0.16,0.6,1.4];
   if(c==='WAVE_B'){ const ph=f*Math.PI*2; pose.sp=[0.22*Math.sin(ph),pose.sp[1],pose.sp[2]]; pose.hr=[-0.14*Math.sin(ph-1),pose.hr[1],pose.hr[2]]; pose.hz=0.05*Math.sin(ph-1.6); pose.hd=[-0.15*Math.sin(ph+0.8),pose.hd[1],pose.hd[2]]; }
-  // soften the arms toward the shoulders so elbows keep a curve, and let the hands keep moving through the hold
-  const shY=1.46, drift=[0.022*Math.sin(b*Math.PI*2+i),0.028*Math.cos(b*Math.PI*2+i*.7)];
-  pose.lh=[0.16+(pose.lh[0]-0.16)*0.93+drift[0],shY+(pose.lh[1]-shY)*0.93+drift[1],pose.lh[2]*0.93+0.02];
-  pose.rh=[-0.16+(pose.rh[0]+0.16)*0.93-drift[0],shY+(pose.rh[1]-shY)*0.93+drift[1],pose.rh[2]*0.93+0.02];
-  pose.le=[pose.le[0]*1.1,pose.le[1]-0.12,pose.le[2]-0.1]; pose.re=[pose.re[0]*1.1,pose.re[1]-0.12,pose.re[2]-0.1];
-  // hips trace a soft figure-eight, the chest pops on the accent
-  pose.hr=[pose.hr[0]+0.035*Math.sin(b*Math.PI*2),pose.hr[1],pose.hr[2]+0.05*Math.sin(b*Math.PI)];
-  pose.sp=[pose.sp[0]-0.06*acc,pose.sp[1],pose.sp[2]+0.035*Math.sin(b*Math.PI+0.8)];
-  pose.hd=[pose.hd[0],pose.hd[1],pose.hd[2]+0.06*Math.sin(b*Math.PI+1.4)];
+  // elbows keep a curve; the hands keep a little life through the hold and follow the body down
+  const shY=1.46, drift=[0.018*Math.sin(b*Math.PI*2+i),0.022*Math.cos(b*Math.PI*2+i*.7)], dy=pose.hy*0.85;
+  pose.lh=[0.16+(pose.lh[0]-0.16)*0.94+drift[0]+pose.hx*0.6,shY+(pose.lh[1]-shY)*0.94+drift[1]+dy,pose.lh[2]*0.94+0.02];
+  pose.rh=[-0.16+(pose.rh[0]+0.16)*0.94-drift[0]+pose.hx*0.6,shY+(pose.rh[1]-shY)*0.94+drift[1]+dy,pose.rh[2]*0.94+0.02];
+  pose.le=[pose.le[0]*1.1,pose.le[1]-0.12+dy,pose.le[2]-0.1]; pose.re=[pose.re[0]*1.1,pose.re[1]-0.12+dy,pose.re[2]-0.1];
   if(c==='RIPPLE'){ const ph=b*Math.PI*2; pose.lh=[0.6,1.5+0.35*Math.sin(ph),0.1]; pose.rh=[-0.6,1.5+0.35*Math.sin(ph+1.6),0.1]; }
   if(c==='WING'){ const fl=Math.sin(b*Math.PI*4)*0.22; pose.lh=[0.75,1.5+fl,-0.05]; pose.rh=[-0.75,1.5+fl,-0.05]; }
   if(c==='SHIMMY'){ const s=Math.sin(b*Math.PI*4); pose.sp=[pose.sp[0],pose.sp[1],0.09*s]; pose.lh=[pose.lh[0],pose.lh[1]+0.05*s,pose.lh[2]]; pose.rh=[pose.rh[0],pose.rh[1]-0.05*s,pose.rh[2]]; }
@@ -2293,6 +2368,9 @@ const curBatter=()=>{const t=batTeam(); return t.lineup[t.idx%9];};
 const curPitcher=()=>fieldTeam().pitcher;
 const fatigue=p=>clamp((p.pc-p.cap*0.72)/(p.cap*0.45),0,1);
 function after(ms,fn){ G.phase='wait'; G.t=0; G.waitDur=ms; G.next=fn; }
+// side effects on a timer that never touch the game flow (after() owns the flow)
+function later(ms,fn){ (G.later=G.later||[]).push({at:G.clock+ms,fn}); }
+function runLater(){ if(!G.later||!G.later.length) return; const due=G.later.filter(x=>G.clock>=x.at); G.later=G.later.filter(x=>G.clock<x.at); due.forEach(x=>{ try{ x.fn(); }catch(e){} }); }
 function setMarquee(s){ if(G.marq.s!==s) G.marq={s,x:0}; }
 function setMood(m,ms){ G.mood=m; G.moodT=ms||0; }
 function popup(text,o){ o=o||{}; G.popups.push({text,sub:o.sub||'',color:o.color||'#fff',size:o.size||44,t:0,dur:o.dur||1200,y:o.y||380}); }
@@ -2859,7 +2937,7 @@ function commitOutcome(o){
     if(o.runs) G.board={a:'得分',b:`+${o.runs}`,c:G.home.hud};
     // taking the lead late: the comeback number, the whole stand on its feet
     const d1=G.score.home-G.score.away;
-    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; after(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(fillT(d0<0?SHOUT_T.come:SHOUT_T.ahead,{tn:G.home.name}),true); }); }
+    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; later(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(fillT(d0<0?SHOUT_T.come:SHOUT_T.ahead,{tn:G.home.name}),true); }); }
   }else{
     if(o.res==='K'){ G.ks++; addGauge(20); missionEvent('k'); }
     if(o.res==='DP') missionEvent('dp');
@@ -2999,8 +3077,8 @@ function update(dt){
       else if(G.kBars%2===0) leaderShout(offenseChant(),true,true,1.12); }
   }
   // defense: the captain leads a different call every few seconds, read from the count and the bases
-  if(!G.attract&&!G.over&&!userBatting()&&['choose','aim','gauge','windup'].includes(G.phase)&&G.clock-(G.lastDefChant||-9e9)>5600){ G.lastDefChant=G.clock; leaderShout(defenseChant(),true,true,1.12); }
-  updateAura(dt/1000); updateSmoke(dt/1000);
+  if(!G.attract&&!G.over&&!userBatting()&&['choose','aim','gauge','windup'].includes(G.phase)&&G.clock-(G.lastDefChant||-9e9)>9000){ G.lastDefChant=G.clock; leaderShout(defenseChant(),true,true,1.12); }
+  runLater(); updateAura(dt/1000); updateSmoke(dt/1000);
   updateFigures(dt/1000);
   updateSquads(dt/1000);
   updateBallVisual();
@@ -3079,11 +3157,16 @@ function updatePlay(dt){
       const a=rn.path[rn.seg], b=rn.path[rn.seg+1], L=a.distanceTo(b), rem=L-rn.s;
       if(adv<rem){ rn.s+=adv; adv=0; } else { adv-=rem; rn.seg++; rn.s=0; }
     }
-    if(rn.seg>=rn.path.length-1){ rn.done=true; const e=rn.path[rn.path.length-1]; f.root.position.set(e.x,0,e.z); setMode(f,'lead',0.3); return; }
+    if(rn.seg>=rn.path.length-1){ rn.done=true; const e=rn.path[rn.path.length-1]; f.root.position.set(e.x,0,e.z);
+      if(f.mode==='slide') later(650,()=>{ if(f.mode==='slide') setMode(f,'lead',0.35); }); else setMode(f,'lead',0.3); return; }
     const a=rn.path[rn.seg], b=rn.path[rn.seg+1], u=rn.s/a.distanceTo(b);
+    if(!rn.slid&&rn.seg===rn.path.length-2&&a.distanceTo(b)-rn.s<2.7){
+      const bi=BASES.findIndex(q=>q.distanceTo(b)<0.6), thrown=pl.plan.throws.some(x=>x.base===bi);
+      if(bi!==1&&bi>=0&&(thrown||rn.out||(bi===0&&rnd()<.6))){ rn.slid=true; f.slideHead=f.p.spd>.78&&hashStr(f.p.id)%2===0; setMode(f,'slide',0.04); }
+    }
     f.root.position.set(lerp(a.x,b.x,u),0,lerp(a.z,b.z,u));
     f.yaw=faceYaw(a.x,a.z,b.x,b.z);
-    if(f.mode!=='run') setMode(f,'run',0.12);
+    if(f.mode!=='run'&&f.mode!=='slide') setMode(f,'run',0.12);
   });
   if(t>=pl.endT){
     G.play=null; G.phase='idle';
@@ -3233,6 +3316,7 @@ function updateFigures(dt){
   if(bf&&bf.root.visible&&!G.trot){
     const S=bf.bset; let p;
     if(bf.mode==='run'){ bf.runPh=(bf.runPh||0)+dt*14; p=runPose(bf.runPh); }
+    else if(bf.mode==='slide') p=bf.slideHead?DIVE:SLIDE_F;
     else if(bf.mode==='lead') p=RLEAD;
     else if(bf.mode==='swing'){ p=sampleKeys(S.swing,bf.mt); if(bf.mt>1.1&&!G.play) setMode(bf,'stance',0.5); }
     else if(bf.mode==='load'){ p=bf.mt<0.3?S.load:lp(S.load,S.stride,ease((bf.mt-0.3)/0.22)); if(G.pitch&&G.pitch.done&&!G.play&&bf.mt>0.2) setMode(bf,'stance',0.5); }
@@ -3260,6 +3344,7 @@ function updateFigures(dt){
   (G.runnerFigs||[]).forEach(r=>{
     if(!r||!r.root.visible||r===bf||(G.trot&&G.trot.mates.includes(r))) return;
     if(r.mode==='run'){ r.runPh=(r.runPh||0)+dt*14; drive(r,runPose(r.runPh),dt); }
+    else if(r.mode==='slide') drive(r,r.slideHead?DIVE:SLIDE_F,dt);
     else drive(r,RLEAD,dt);
   });
   if(S3.spots0) {}
@@ -4879,7 +4964,7 @@ function musicMode(){
   if(c&&c.type==='kdance'){ const T=c.data.side==='away'?A:H; return {key:'k'+T.id,song:songFor('k',null,T),vol:1}; }
   if(c&&c.type==='celebrate'){ const T=c.data.side==='away'?A:H; return {key:'cel'+T.id,song:songFor('win',null,T),vol:1}; }
   const b=curBatter(), T=batTeam(), user=userBatting();
-  if(!user) return {key:'def'+H.id,song:songFor('defense',null,H),vol:.75};
+  if(!user){ const pp=curPitcher(); return {key:'def'+H.id+pp.id,song:songFor('defense',pp,H),vol:.8}; }
   return {key:(G.chance?'c':'p')+b.id,song:G.chance?songFor('chance',b,T):songFor('player',b,T),vol:user?1:.6};
 }
 
@@ -4958,7 +5043,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010023515', box=document.getElementById('upd');
+  const BUILD='20261010030127', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
