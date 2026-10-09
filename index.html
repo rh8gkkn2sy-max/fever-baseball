@@ -190,12 +190,15 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <h2>設定</h2>
     <div class="setrow"><span>音效與音樂</span><button class="pill sel" id="setSound">開</button></div>
     <div class="setrow"><label for="setMusic">音樂音量</label><input type="range" id="setMusic" min="0" max="100" value="80"></div>
+    <div class="setrow"><span>AI 團長語音<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">預錄的自然語音，關掉改用手機內建語音</small></span><button class="pill sel" id="setAiVoice">開</button></div>
     <div class="setrow"><span>團長語音</span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setVoiceTest">試聽</button><button class="pill sel" id="setVoice">開</button></span></div>
     <div class="setrow"><span>打擊輔助瞄準</span><button class="pill sel" id="setAssist">開</button></div>
+    <div class="setrow"><span>存檔備份<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">匯出到「檔案」可存 iCloud／Google Drive</small></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setExport">匯出</button><button class="pill" id="setImport">匯入</button></span></div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
     <div class="setrow"><span>新手教學</span><button class="pill" id="setTut">重新開始</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.7（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.8（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -217,7 +220,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 1.7（2026.10.10）</div>
+    <div class="ver">版本 1.8（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -599,37 +602,79 @@ function speakNow(text,rate){
 }
 // classic CPBL stand calls, picked by the situation and never twice in a row
 function pickChant(list){ MUS.recent=MUS.recent||[]; const fresh=list.filter(s=>!MUS.recent.includes(s)), s=pick(fresh.length?fresh:list); MUS.recent.push(s); if(MUS.recent.length>4) MUS.recent.shift(); return s; }
+const OFF_T={
+  base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！'],
+  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！'], spd:['{n}！跑起來！','閃電出擊！{n}！'],
+  risp:['得分！得分！{n}！','帶他們回家！帶他們回家！','一支安打就好！','打點！打點！{n}！'], loaded:['滿壘！清壘！清壘！','滿貫全壘打！'],
+  two:['顧好！顧好！選好球！','穩住！穩住！看清楚！'], three:['看清楚！保送也好！'], behind:['逆轉！逆轉！{tn}逆轉！','還沒結束！追上去！'], twoOut:['兩出局！不放棄！','最後一口氣！衝啊！']};
+const DEF_T={
+  base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！'],
+  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','三振！三振！','一顆就好！一顆好球！'], one:['再一個好球！','揮棒落空！揮棒落空！'],
+  dp:['雙殺！雙殺！','滾地球！雙殺！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
+  twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！'], clean:['三上三下！三上三下！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！']};
+const SHOUT_T={hr:'全壘打！{n}！全壘打！',hit:'安打！{n}！',score:'得分！{tn}得分！',trot:'全壘打！{n}！繞場一周！',come:'逆轉！逆轉！{tn}逆轉！',ahead:'超前！超前！{tn}加油！',
+  closerIn:'守護神登場！{pn}！',lucky:'幸運七局！全場起立！跟著我一起喊！{tn}加油！',luckyGood:'太棒了！全場沸騰！',luckyOk:'很好！繼續大聲喊！',greet:'{tn}應援團，比賽開始！全場一起加油！',
+  k:['三振！三振！三振！','{pn}！三振王！','揮棒落空！回去吃便當！','三振！漂亮！'],field:['雙殺守備！','三壘阻殺！','沒收全壘打！','美技飛撲！','跳接美技！','飛撲攔截！'].map(t=>'好球！'+t)};
+function fillT(s,v){ return s.replace(/\{(n|pn|tn)\}/g,(m,k)=>v[k]||''); }
 function offenseChant(){
-  const b=curBatter(), n=b.short||b.name, T=batTeam(), tn=T.name, behind=G.score.home<G.score.away, L=[];
-  L.push(`${n}～全～壘～打！`,`安打！安打！${n}！`,`${n}！一棒打出去！`,`強棒出擊！${n}！`,`${n}加油！${n}加油！`,`攻擊！攻擊！${tn}！`,`打出去！打出去！`,`${tn}！Let's go！`,`嘿！嘿！${n}！`);
-  if(b.pow>.75) L.push(`${n}～大～砲～！`,`炸裂吧！${n}！`,`飛出去！飛出去！`);
-  if(b.spd>.8) L.push(`${n}！跑起來！`,`閃電出擊！${n}！`);
-  if(G.bases[1]||G.bases[2]) L.push(`得分！得分！${n}！`,'帶他們回家！帶他們回家！','一支安打就好！',`打點！打點！${n}！`);
-  if(G.bases[0]&&G.bases[1]&&G.bases[2]) L.push('滿壘！清壘！清壘！','滿貫全壘打！');
-  if(G.strikes===2) L.push('顧好！顧好！選好球！','穩住！穩住！看清楚！');
-  if(G.balls===3) L.push('看清楚！保送也好！');
-  if(behind&&G.inning>=7) L.push(`逆轉！逆轉！${tn}逆轉！`,'還沒結束！追上去！');
-  if(G.outs===2) L.push('兩出局！不放棄！','最後一口氣！衝啊！');
-  return pickChant(L);
+  const b=curBatter(), v={n:b.short||b.name,tn:batTeam().name}, behind=G.score.home<G.score.away, L=OFF_T.base.slice();
+  if(b.pow>.75) L.push(...OFF_T.pow); if(b.spd>.8) L.push(...OFF_T.spd);
+  if(G.bases[1]||G.bases[2]) L.push(...OFF_T.risp); if(G.bases[0]&&G.bases[1]&&G.bases[2]) L.push(...OFF_T.loaded);
+  if(G.strikes===2) L.push(...OFF_T.two); if(G.balls===3) L.push(...OFF_T.three);
+  if(behind&&G.inning>=7) L.push(...OFF_T.behind); if(G.outs===2) L.push(...OFF_T.twoOut);
+  return fillT(pickChant(L),v);
 }
 function defenseChant(){
-  const p=curPitcher(), pn=p.short||p.name, L=[`${pn}加油！${pn}加油！`,'好球！好球！','穩住！穩住！','守下來！守下來！',`${G.home.name}！守備加油！`,'投好球！投好球！'];
-  if(G.strikes===2) L.push('再來一個好球！','三、振、他！','便當便當，揮棒落空！','三振！三振！','一顆就好！一顆好球！');
-  else if(G.strikes===1) L.push('再一個好球！','揮棒落空！揮棒落空！');
-  if(G.bases[0]&&G.outs<2) L.push('雙殺！雙殺！','滾地球！雙殺！');
-  if(G.bases[1]||G.bases[2]) L.push('守住！守住！','一個出局數！一個就好！','不要讓他回來！');
-  if(G.outs===2) L.push('最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！');
-  if(G.outs===0&&!G.bases.some(Boolean)) L.push('三上三下！三上三下！');
-  if(G.balls===3) L.push('不要怕！塞進去！');
-  if(p.role==='CL') L.push(`守護神！${pn}！`,'關門！關門！');
-  return pickChant(L);
+  const p=curPitcher(), v={pn:p.short||p.name,tn:G.home.name}, L=DEF_T.base.slice();
+  if(G.strikes===2) L.push(...DEF_T.two); else if(G.strikes===1) L.push(...DEF_T.one);
+  if(G.bases[0]&&G.outs<2) L.push(...DEF_T.dp); if(G.bases[1]||G.bases[2]) L.push(...DEF_T.risp);
+  if(G.outs===2) L.push(...DEF_T.twoOut); if(G.outs===0&&!G.bases.some(Boolean)) L.push(...DEF_T.clean);
+  if(G.balls===3) L.push(...DEF_T.three); if(p.role==='CL') L.push(...DEF_T.closer);
+  return fillT(pickChant(L),v);
+}
+// every line the captain can say, grouped into downloadable packs: common, one per club, one per player
+function captainLines(){
+  const packs={common:new Set()}, add=(k,t)=>{ (packs[k]=packs[k]||new Set()).add(t); };
+  const all=[...Object.values(OFF_T).flat(),...Object.values(DEF_T).flat(),...Object.values(SHOUT_T).flat()];
+  all.filter(t=>!/\{/.test(t)).forEach(t=>add('common',t));
+  TEAMS.forEach(T=>all.filter(t=>/\{tn\}/.test(t)&&!/\{n\}|\{pn\}/.test(t)).forEach(t=>add('t-'+T.id,fillT(t,{tn:T.name}))));
+  TEAMS.forEach(T=>chanceLyrics({short:'',nick:''},T).filter(l=>!/^機會|！　帶他們/.test(l)).forEach(l=>add('t-'+T.id,l)));
+  ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id;
+    if(p.role){ all.filter(t=>/\{pn\}/.test(t)).forEach(t=>add(k,fillT(t,{pn:p.short||p.name}))); return; }
+    all.filter(t=>/\{n\}/.test(t)).forEach(t=>add(k,fillT(t,{n:p.short||p.name})));
+    (p.lyrics||[p.chant]).filter(Boolean).forEach(l=>add(k,l));
+    chanceLyrics(p,TEAMS[p.homeTeam]).forEach(l=>add(k,l)); });
+  const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
+}
+/* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
+const VP={map:{},loading:{},clips:{}}, VOICE_VER=1;
+const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
+function loadVoicePack(name){
+  if(VP.loading[name]) return VP.loading[name];
+  return VP.loading[name]=fetch(`voice/${name}.bin?v=${VOICE_VER}`).then(r=>r.ok?r.arrayBuffer():null).then(ab=>{ if(!ab) return;
+    const dv=new DataView(ab), n=dv.getUint32(0,true), idx=JSON.parse(new TextDecoder().decode(new Uint8Array(ab,4,n))), base=4+n;
+    for(const k in idx) VP.map[k]={ab,off:base+idx[k][0],len:idx[k][1],buf:null}; }).catch(()=>{});
+}
+function voicePacksForGame(){
+  if(!G||G.attract) return; const T=G.home;
+  ['common','t-'+T.id].concat(T.lineup.map(p=>'p-'+p.id),T.pitchers.map(p=>'p-'+p.id)).forEach((n,i)=>setTimeout(()=>loadVoicePack(n),i*120));
+}
+function playClip(e){
+  const c=AU.ctx; if(!c) return false;
+  const go=buf=>{ e.buf=buf; if(MUS.clip){ try{ MUS.clip.stop(); }catch(_){} }
+    const s=c.createBufferSource(), g=c.createGain(); s.buffer=buf; g.gain.value=1.5; s.connect(g).connect(AU.master); s.start(); MUS.clip=s;
+    MUS.duck=.3; clearTimeout(MUS.duckT); MUS.duckT=setTimeout(()=>MUS.duck=1,buf.duration*1000+120); };
+  if(e.buf){ go(e.buf); return true; }
+  c.decodeAudioData(e.ab.slice(e.off,e.off+e.len)).then(go).catch(()=>{}); return true;
 }
 function leaderShout(text,force,crowdEcho,rate){
   if(!AU.on||!AU.ctx||!G||G.attract) return;
   G.shout={txt:text.replace(/[　 ]+/g,' '),t:0};
   if(SAVE.settings&&SAVE.settings.voice===false) return;
   const now=performance.now(); if(!force&&now-MUS.lastShout<2400) return; MUS.lastShout=now;
-  if(window.speechSynthesis&&(VOICE.v||VOICE.none!==true)){
+  const clip=SAVE.settings.aiVoice!==false&&VP.map[voiceKey(text)];
+  if(clip){ try{ speechSynthesis.cancel(); }catch(e){} playClip(clip); }
+  else if(window.speechSynthesis&&(VOICE.v||VOICE.none!==true)){
     try{ speakNow(text,rate||1.08); }catch(e){}
   }
   // the stands answer the call
@@ -2365,6 +2410,7 @@ function startHalf(){
 }
 function startPA(){
   applyZoom(zoomFor());
+  if(!G.attract&&G.home){ loadVoicePack('p-'+curBatter().id); loadVoicePack('p-'+curPitcher().id); }
   G.balls=0; G.strikes=0; G.skill=null; G.pitchInfo=null; G.relClock=null; G.camMode='bat'; G.fb=null;
   const b=curBatter(), t=batTeam(), user=userBatting(), side=batSide();
   placeBatter();
@@ -2404,7 +2450,7 @@ function pitchChange(T,side,penIdx,then){
   placeFig(f,0,-18.44+0.05,left?Math.PI/2:-Math.PI/2,0.25); f.home=f.root.position.clone(); f.mode='pitch';
   G.show={p,T,big,t:0,dur:big?10500:3000,fx:CLOSER_FX[T.id]||'sweep'};
   setMarquee(big?`終結者登場　${p.nick||p.name}　${p.name}　#${p.num}`:`投手更換　${p.name}　#${p.num}`);
-  if(big){ drawAds({c1:T.hud,c2:T.c2,name:p.name,nick:p.nick||'CLOSER'}); showMusic(10,true); leaderShout(`守護神登場！${p.short||p.name}！`,true); }
+  if(big){ drawAds({c1:T.hud,c2:T.c2,name:p.name,nick:p.nick||'CLOSER'}); showMusic(10,true); leaderShout(fillT(SHOUT_T.closerIn,{pn:p.short||p.name}),true); }
   else showMusic(2.6,false);
   startCut('show',G.show.dur,{p,T,big,f},()=>{ G.show=null; restoreLights(); drawAds(null); then&&then(); });
 }
@@ -2791,8 +2837,8 @@ function showOutcome(o){
   if(o.runs) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
   popup(o.text,{sub,color:o.color,size:o.size,dur:1600,y:330});
   if(userBatting()){
-    if(o.res==='HR'){ G.fwT=3; sfx('roar'); setMarquee(`全壘打！全壘打！　${curBatter().name}！　${G.home.call}`); leaderShout(`全壘打！${curBatter().short}！全壘打！`,true); }
-    else if(o.hit){ sfx('cheer'); leaderShout(o.runs?`得分！${G.home.name}得分！`:`安打！${curBatter().short}！`,true); }
+    if(o.res==='HR'){ G.fwT=3; sfx('roar'); setMarquee(`全壘打！全壘打！　${curBatter().name}！　${G.home.call}`); leaderShout(fillT(SHOUT_T.hr,{n:curBatter().short}),true); }
+    else if(o.hit){ sfx('cheer'); leaderShout(o.runs?fillT(SHOUT_T.score,{tn:G.home.name}):fillT(SHOUT_T.hit,{n:curBatter().short}),true); }
     if(o.hit||o.res==='BB'||o.runs) setMood('jump',2400);
   }else{
     if(o.res==='K'){ setMood('jump',1600); sfx('cheer'); }
@@ -2813,7 +2859,7 @@ function commitOutcome(o){
     if(o.runs) G.board={a:'得分',b:`+${o.runs}`,c:G.home.hud};
     // taking the lead late: the comeback number, the whole stand on its feet
     const d1=G.score.home-G.score.away;
-    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; after(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(d0<0?`逆轉！逆轉！${G.home.name}逆轉！`:`超前！超前！${G.home.name}加油！`,true); }); }
+    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; after(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(fillT(d0<0?SHOUT_T.come:SHOUT_T.ahead,{tn:G.home.name}),true); }); }
   }else{
     if(o.res==='K'){ G.ks++; addGauge(20); missionEvent('k'); }
     if(o.res==='DP') missionEvent('dp');
@@ -2827,7 +2873,7 @@ function finishPA(o){
   if(o.res==='K'&&!userBatting()){
     const pn=curPitcher().name;
     setMarquee(`三振！三振！　${pn}　三振！　${G.home.call}`);
-    after(700,()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); leaderShout(pick(['三振！三振！三振！',`${pn}！三振王！`,'揮棒落空！回去吃便當！','三振！漂亮！']),true); });
+    after(700,()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); leaderShout(fillT(pick(SHOUT_T.k),{pn:(curPitcher().short||pn)}),true); });
     return;
   }
   if(o.res==='K'&&userBatting()){ after(600,()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA)); return; }
@@ -3006,7 +3052,7 @@ function updatePlay(dt){
   const hl=pl.plan.hl;
   if(!pl.replay&&hl&&ev&&(hl.type==='dive'||hl.type==='jump'||hl.type==='rob')&&!pl.slowed&&t>ev.t-0.32){ pl.slowed=true; G.slow={t:0,dur:1200}; }
   if(ev&&t>=ev.t){
-    if(!pl.shown){ pl.shown=true; sfx(ev.air?'mitt':'tick'); if(hl&&!pl.replay&&hl.type!=='hr'){ popup(hl.title,{color:'#FFD54A',size:46,y:240,dur:1400}); if(!userBatting()) leaderShout(`好球！${hl.title}`,true); } }
+    if(!pl.shown){ pl.shown=true; sfx(ev.air?'mitt':'tick'); if(hl&&!pl.replay&&hl.type!=='hr'){ popup(hl.title,{color:'#FFD54A',size:46,y:240,dur:1400}); if(!userBatting()) leaderShout('好球！'+hl.title,true); } }
     const cur=th.find(x=>t>=x.at&&t<x.at+x.dur);
     if(cur){
       if(!cur.from3) cur.from3=handPos(F[cur.from],true);
@@ -3078,7 +3124,7 @@ function startTrot(pl,done){
   G.trot={acts,act:null,t:0,fig:bf,path:[new V3(0.3,0,0),BASES[1].clone(),BASES[2].clone(),BASES[3].clone(),new V3(0,0,0.3)],seg:0,s:0,speed:FAST()?11:7.6,mates,done,arrive:null};
   G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0);
   setMood('jump',12000); G.fwT=Math.max(G.fwT,5);
-  if(userBatting()) leaderShout(`全壘打！${curBatter().short}！繞場一周！`,true);
+  if(userBatting()) leaderShout(fillT(SHOUT_T.trot,{n:curBatter().short}),true);
 }
 function updateTrot(dt){
   const Tr=G.trot, f=Tr.fig; Tr.t+=dt;
@@ -4074,7 +4120,7 @@ function startLucky(){
   G.phase='lucky'; G.t=0;
   setMarquee(`幸運七局！　全場起立　${T.call}`); setMood('skill',99999);
   sfx('horn');
-  leaderShout(`幸運七局！全場起立！跟著我一起喊！${T.name}加油！`,true);
+  leaderShout(fillT(SHOUT_T.lucky,{tn:T.name}),true);
 }
 function judge(n,dt,x,y){
   const w=G.lk.win, a=Math.abs(dt);
@@ -4177,7 +4223,7 @@ function updateLucky(dt){
     G.luckyScore={p:c.great,g:c.good,n:total,rank,combo:L.maxCombo}; if(rank==='S'||rank==='A') missionEvent('lucky');
     addGauge(gain); setMood('jump',2400); sfx('roar'); confetti(300);
     popup(`應援評價 ${rank}`,{sub:`最大連擊 ${L.maxCombo}　應援能量 +${gain}`,color:G.home.hud,size:56,dur:2000});
-    leaderShout(rank==='S'||rank==='A'?'太棒了！全場沸騰！':'很好！繼續大聲喊！',true);
+    leaderShout(rank==='S'||rank==='A'?SHOUT_T.luckyGood:SHOUT_T.luckyOk,true);
     after(2200,()=>{ G.lk=null; setMood('idle'); startHalf(); });
   }
 }
@@ -4585,7 +4631,10 @@ $('playBall').onclick=()=>{
   let opp; do{ opp=Math.floor(rnd()*TEAMS.length); }while(opp===pickTeam);
   show(null); newGame(pickTeam,opp,LEADER_PICK,pickDiff,false);
   // greet inside the tap, which is what lets iPhone Safari speak later in the game
-  if(!(SAVE.settings&&SAVE.settings.voice===false)) try{ speakNow(`${TEAMS[pickTeam].name}應援團，比賽開始！全場一起加油！`,1.05); }catch(e){}
+  voicePacksForGame();
+  if(!(SAVE.settings&&SAVE.settings.voice===false)){ const g=fillT(SHOUT_T.greet,{tn:TEAMS[pickTeam].name});
+    // speak once inside the tap (unlocks iPhone speech), then the recorded greeting replaces it if it is ready
+    try{ speakNow(g,1.05); }catch(e){} loadVoicePack('t-'+TEAMS[pickTeam].id).then(()=>{ const c=VP.map[voiceKey(g)]; if(c&&SAVE.settings.aiVoice!==false){ try{ speechSynthesis.cancel(); }catch(e){} playClip(c); } }); }
 };
 $('again').onclick=()=>{ startAttract(); renderTeams(); show('scrTeam'); };
 $('toTitle').onclick=()=>{ startAttract(); show('scrTitle'); };
@@ -4595,6 +4644,7 @@ SAVE.settings=Object.assign({sound:true,music:80,voice:true,assist:true},SAVE.se
 AU.on=SAVE.settings.sound;
 function renderSettings(){
   const s=SAVE.settings;
+  $('setAiVoice').textContent=s.aiVoice===false?'關':'開'; $('setAiVoice').classList.toggle('sel',s.aiVoice!==false);
   [['setSound','sound'],['setVoice','voice'],['setAssist','assist'],['setFast','fast']].forEach(([id,k])=>{ $(id).textContent=s[k]?'開':'關'; $(id).classList.toggle('sel',s[k]); });
   $('setMusic').value=s.music;
   $('setFull').textContent=document.fullscreenElement||document.webkitFullscreenElement?'離開全螢幕':'進入全螢幕';
@@ -4619,6 +4669,22 @@ $('setFull').onclick=toggleFull;
 $('setSound').onclick=()=>{ SAVE.settings.sound=!SAVE.settings.sound; AU.on=SAVE.settings.sound; if(!AU.on) try{ speechSynthesis.cancel(); }catch(e){} persist(); renderSettings(); };
 $('setVoiceTest').onclick=()=>{ audioInit(); pickVoice(); try{ speakNow('大家好，我是應援團長！全場一起加油！',1.05); $('setNote').textContent=(VOICE.v?`使用語音：${VOICE.v.name}`:'正在用系統預設的中文語音。')+(VOICE.hq?'':'　想要更自然的聲音：iPhone「設定 → 輔助使用 → 朗讀內容 → 聲音 → 中文（台灣）」下載「增強」或「高品質」版本，下載後重新打開遊戲。')+'　沒聲音請關閉側邊的靜音開關。'; }catch(e){ $('setNote').textContent='這個瀏覽器不支援語音。'; } };
 $('setVoice').onclick=()=>{ SAVE.settings.voice=!SAVE.settings.voice; if(!SAVE.settings.voice) try{ speechSynthesis.cancel(); }catch(e){} persist(); renderSettings(); };
+$('setAiVoice').onclick=()=>{ SAVE.settings.aiVoice=SAVE.settings.aiVoice===false; persist(); renderSettings(); };
+// backup: a JSON file handed to the share sheet (Files → iCloud Drive / Google Drive), restored from the file picker
+$('setExport').onclick=async()=>{
+  const d=new Date(), name=`fever-baseball-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  const blob=new Blob([JSON.stringify({app:'fever-baseball',v:1,at:d.toISOString(),save:SAVE})],{type:'application/json'}), file=new File([blob],name,{type:'application/json'});
+  try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'熱血應援棒球 存檔'}); $('setNote').textContent='已開啟分享選單：選「儲存到檔案」，再挑 iCloud Drive 或 Google Drive。'; return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  $('setNote').textContent=`已下載 ${name}，可以放到雲端硬碟保存。`;
+};
+$('setImport').onclick=()=>$('importFile').click();
+$('importFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const j=JSON.parse(r.result), s=j&&j.save; if(!s||typeof s.coins!=='number'||!s.cards) throw 0;
+      if(!confirm(`要用這個存檔取代目前進度嗎？\n金幣 ${s.coins}・卡片 ${Object.keys(s.cards).length} 張`)) return;
+      SAVE=Object.assign(loadSave(),s); persist(); renderSettings(); $('tCoins').textContent=SAVE.coins; $('setNote').textContent='存檔已匯入！'; }
+    catch(_){ $('setNote').textContent='這個檔案不是熱血應援棒球的存檔。'; } e.target.value=''; };
+  r.readAsText(f); };
 $('setTut').onclick=()=>{ SAVE.tut={}; persist(); $('setTut').textContent='下一場開始'; };
 $('setFast').onclick=()=>{ SAVE.settings.fast=!SAVE.settings.fast; persist(); renderSettings(); };
 $('setAssist').onclick=()=>{ SAVE.settings.assist=!SAVE.settings.assist; persist(); renderSettings(); };
@@ -4892,7 +4958,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010020250', box=document.getElementById('upd');
+  const BUILD='20261010023330', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
