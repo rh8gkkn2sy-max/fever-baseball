@@ -183,7 +183,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>團長語音</span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setVoiceTest">試聽</button><button class="pill sel" id="setVoice">開</button></span></div>
     <div class="setrow"><span>打擊輔助瞄準</span><button class="pill sel" id="setAssist">開</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.3（2026.10.09）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.4（2026.10.09）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -205,7 +205,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 1.3（2026.10.09）</div>
+    <div class="ver">版本 1.4（2026.10.09）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -4609,6 +4609,34 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
   });
   document.getElementById('gIn').addEventListener('keydown',e=>e.stopPropagation());
   setTimeout(()=>{ try{ document.getElementById('gIn').focus(); }catch(e){} },300);
+})();
+</script>
+<!-- Update check, only in the stand-alone site build: a home-screen app keeps its old page, so ask the server for the newest build -->
+<div id="upd" hidden><span id="updTxt">有新版本</span><button id="updGo">立即更新</button></div>
+<style>
+#upd{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;border-radius:999px;background:#121630;box-shadow:0 0 0 2px #FFB23F,0 10px 30px rgba(0,0,0,.5);font:700 16px "Noto Sans TC","PingFang TC",sans-serif;color:#fff;white-space:nowrap}
+#upd[hidden]{display:none}
+#upd button{font:900 16px "Noto Sans TC",sans-serif;border:0;border-radius:999px;padding:8px 16px;background:#FFB23F;color:#1B1203;cursor:pointer}
+</style>
+<script>
+(function(){
+  const BUILD='20261009225313', box=document.getElementById('upd');
+  const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
+  async function check(){
+    try{
+      const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+      const j=await r.json(); if(!j.build||j.build===BUILD) return;
+      // nothing to lose on the title screen: update right away; mid-game, offer a button
+      const title=document.getElementById('scrTitle'), idle=title&&!title.hidden;
+      let tried=''; try{ tried=sessionStorage.getItem('fever.upd')||''; }catch(e){}
+      if(idle&&tried!==j.build){ try{ sessionStorage.setItem('fever.upd',j.build); }catch(e){} return go(j.build); }
+      document.getElementById('updTxt').textContent=`有新版本 ${j.version||''}`; box.hidden=false;
+      document.getElementById('updGo').onclick=()=>go(j.build);
+    }catch(e){}
+  }
+  check();
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) check(); });
+  window.addEventListener('pageshow',e=>{ if(e.persisted) check(); });
 })();
 </script>
 
