@@ -183,7 +183,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>團長語音</span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setVoiceTest">試聽</button><button class="pill sel" id="setVoice">開</button></span></div>
     <div class="setrow"><span>打擊輔助瞄準</span><button class="pill sel" id="setAssist">開</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.4（2026.10.09）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.5（2026.10.09）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -205,7 +205,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 1.4（2026.10.09）</div>
+    <div class="ver">版本 1.5（2026.10.09）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1074,12 +1074,14 @@ function resize(){
   stageEl.style.setProperty('--st',(tall?iT:0)+'px');
   let w,h;
   if(tall){
-    w=fw0; h=fh0; const s=w/W, botH=(H-FB)*s, fH=h-iT-iB0-FT*s-botH, ext=fH/s-(FB-FT);
+    w=fw0; h=fh0; const s=w/W, eB=iB0/s, stageH=(ST1-FB+eB)*s, fH=h-stageH, ext=fH/s-(FB-FT);
     const fsrc={x:0,y:FT-ext/2,w:W,h:FB-FT+ext};
-    LAYOUT={land:false,tall:true,fieldSrc:fsrc,regions:[
-      {kind:'field',src:fsrc,dst:{x:0,y:iT+FT*s,w,h:fH},s},
-      {kind:'top',src:{x:0,y:0,w:W,h:FT},dst:{x:0,y:iT,w,h:FT*s},s},
-      {kind:'bottom',src:{x:0,y:FB,w:W,h:H-FB},dst:{x:0,y:h-iB0-botH,w,h:botH},s}]};
+    const sbS=clamp(w/430,0.8,1.1);
+    LAYOUT={land:false,tall:true,fieldSrc:fsrc,stageExt:eB,
+      ctl:{sb:{x:10,y:iT+8,s:sbS},hint:{x:12,y:iT+8+70*sbS+20,w:w*0.62,f:clamp(w/28,13,16)}},
+      regions:[
+      {kind:'field',src:fsrc,dst:{x:0,y:0,w,h:fH},s},
+      {kind:'bottom',src:{x:0,y:FB,w:W,h:ST1-FB+eB},dst:{x:0,y:fH,w,h:stageH},s}]};
     stageEl.style.setProperty('--u',s+'px');
   }else if(!land){
     w=Math.max(200,Math.min(aw,ah*W/H)); h=w*H/W;
@@ -1115,13 +1117,13 @@ function resize(){
   dpr=Math.min(2,window.devicePixelRatio||1);
   hud.width=Math.round(w*dpr); hud.height=Math.round(h*dpr);
   cssW=w; cssH=h; scale=LAYOUT.regions[LAYOUT.regions.length-1].s;
-  if(window.ZOOM_READY) applyZoom(land?1.5:1.15);
+  if(window.ZOOM_READY) applyZoom(zoomFor());
   if(renderer){ renderer.setPixelRatio(Math.min(dpr,1.75)); renderer.setSize(w,h,false); }
 }
 // where a rectangle of the portrait layout lands on screen, in CSS pixels
 const FX=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.x:0, FWD=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.w:W;
-function cssRect(r){
-  const R=LAYOUT.regions.filter(R=>r.y>=R.src.y-0.5&&r.y+r.h<=R.src.y+R.src.h+0.5).sort((a,b)=>a.src.h-b.src.h)[0]||LAYOUT.regions[0];
+function cssRect(r,kind){
+  const R=(kind&&LAYOUT.regions.find(R=>R.kind===kind))||LAYOUT.regions.filter(R=>r.y>=R.src.y-0.5&&r.y+r.h<=R.src.y+R.src.h+0.5).sort((a,b)=>a.src.h-b.src.h)[0]||LAYOUT.regions[0];
   return {x:R.dst.x+(r.x-R.src.x)*R.s,y:R.dst.y+(r.y-R.src.y)*R.s,w:r.w*R.s,h:r.h*R.s};
 }
 window.addEventListener('resize',resize); resize();
@@ -2131,21 +2133,24 @@ function computeZone(){
 computeZone();
 // zoom toward the strike zone (landscape a lot, portrait a little); cam copies it in the batting view
 const ZOOM={z:1,ox:0,oy:0};
+function zoomFor(){ return LAYOUT.land?1.5:1.08; }
 function applyZoom(z){
   batCam.clearViewOffset(); batCam.updateProjectionMatrix(); computeZone();
-  const cx=ZC.x/W, cy=(ZC.y-FT)/(FB-FT), ty=Math.min(cy,0.64);
-  ZOOM.z=z; ZOOM.ox=cx*z-cx; ZOOM.oy=cy*z-ty;
-  if(z>1){ const a=batCam.aspect, w=1000*a, h=1000; batCam.setViewOffset(w*z,h*z,w*ZOOM.ox,h*ZOOM.oy,w,h); batCam.updateProjectionMatrix(); }
+  // portrait is narrow: put the zone off-centre, away from the batter, so he stays in the picture
+  const b=typeof G!=='undefined'&&G&&G.home?curBatter():null, lefty=b&&b.bat==='L';
+  const cx=ZC.x/W, cy=(ZC.y-FT)/(FB-FT), ty=Math.min(cy,0.64), tx=LAYOUT.land?cx:cx+(lefty?-0.16:0.16);
+  ZOOM.z=z; ZOOM.ox=cx*z-tx; ZOOM.oy=cy*z-ty;
+  if(z!==1||ZOOM.ox||ZOOM.oy){ const a=batCam.aspect, w=1000*a, h=1000; batCam.setViewOffset(w*z,h*z,w*ZOOM.ox,h*ZOOM.oy,w,h); batCam.updateProjectionMatrix(); }
   computeZone();
   if(typeof G!=='undefined'&&G){ G.cursor.x=ZC.x; G.cursor.y=ZC.y; G.aim.x=ZC.x; G.aim.y=ZC.y; }
 }
 function zoomCam(c,on,fsrc){
-  if(!on||ZOOM.z<=1){ if(c.view&&c.view.enabled){ c.clearViewOffset(); c.updateProjectionMatrix(); } return; }
+  if(!on||(ZOOM.z===1&&!ZOOM.ox&&!ZOOM.oy)){ if(c.view&&c.view.enabled){ c.clearViewOffset(); c.updateProjectionMatrix(); } return; }
   const ex=(fsrc.w/W-1)/2, ey=(fsrc.h/(FB-FT)-1)/2, z=ZOOM.z, w=1000*c.aspect, h=1000;
   const x=w/(1+2*ex)*(ex*(z-1)+ZOOM.ox), y=h/(1+2*ey)*(ey*(z-1)+ZOOM.oy);
   c.setViewOffset(w*z,h*z,x,y,w,h); c.updateProjectionMatrix();
 }
-window.ZOOM_READY=true; applyZoom(LAYOUT.land?1.5:1.15);
+window.ZOOM_READY=true; applyZoom(zoomFor());
 const FPOS=[[0,18.44],[34,27],[13,40],[-13,40],[-34,27],[-28,88],[0,100],[28,88]];
 const POS_SLOT={'一壘手':1,'二壘手':2,'游擊手':3,'三壘手':4,'左外野手':5,'中外野手':6,'右外野手':7};
 let FIGS={};
@@ -2281,6 +2286,7 @@ function startHalf(){
   });
 }
 function startPA(){
+  applyZoom(zoomFor());
   G.balls=0; G.strikes=0; G.skill=null; G.pitchInfo=null; G.relClock=null; G.camMode='bat'; G.fb=null;
   const b=curBatter(), t=batTeam(), user=userBatting(), side=batSide();
   placeBatter();
@@ -3337,7 +3343,7 @@ function render(){
   if(renderer&&TITLE.scene&&!$('scrTitle').hidden){ renderTitle(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,hud.width,hud.height); return; }
   if(renderer&&G){
     renderer.setScissorTest(true);
-    const vp=r=>{ const c=cssRect(r); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h); };
+    const vp=r=>{ const c=cssRect(r,LAYOUT.tall&&r.y<FB?'field':null); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h); };
     renderer.setViewport(0,0,cssW,cssH); renderer.setScissor(0,0,cssW,cssH); renderer.setClearColor(0x0a0d1e,1); renderer.clear();
     const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type));
     const fsrc=LAYOUT.fieldSrc||{x:0,y:FT,w:W,h:FB-FT}, asp=fsrc.w/fsrc.h, vk=fsrc.h/(FB-FT);
@@ -3353,7 +3359,10 @@ function render(){
       renderer.render(stScene,cutCam);
     }else renderer.render(scene,cam);
     if(S3.squads){ const ss=G.attract?'home':batSide(); S3.squads.home.root.visible=ss==='home'; S3.squads.away.root.visible=ss==='away'; }
-    if(!LAYOUT.land){ vp({x:0,y:ST0,w:W,h:ST1-ST0}); renderer.render(stScene,stCam); }
+    if(!LAYOUT.land){ const eB=LAYOUT.tall?LAYOUT.stageExt:0, sh=ST1-ST0+eB, sa=W/sh, sk=sh/(ST1-ST0);
+      if(Math.abs(stCam.aspect-sa)>1e-4){ stCam.aspect=sa; stCam.fov=2*Math.atan(Math.tan(13*D2R)*sk)/D2R; stCam.updateProjectionMatrix(); }
+      const c=cssRect({x:0,y:ST0,w:W,h:sh},LAYOUT.tall?'bottom':null); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h);
+      renderer.render(stScene,stCam); }
     else if(S3.squads&&!stageView&&G.phase!=='lucky'&&LAYOUT.ctl.squad.h>40){
       const q=LAYOUT.ctl.squad, a=q.w/q.h, d=Math.max(3.5/(Math.tan(13*D2R)*a),2.45/(2*Math.tan(13*D2R)));
       landStCam.aspect=a; const cy=Math.tan(13*D2R)*d-0.12; landStCam.position.set(0.4,cy,d); landStCam.lookAt(0.4,cy,0); landStCam.updateProjectionMatrix();
@@ -3385,6 +3394,7 @@ function render(){
   });
   HUD_PX=1;
   drawLandControls();
+  drawTallOverlay();
 }
 /* =========================================================
    HUD drawing
@@ -3401,7 +3411,7 @@ function inRect(p,r){ return p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h; }
 function suggestCloser(){ if(userBatting()||G.attract) return false; const T=G.home, lead=G.score.home-G.score.away; return G.inning>=9&&lead>=1&&lead<=3&&T.pitcher.role!=='CL'&&T.pen.includes(3); }
 
 function drawScoreboard(){
-  if(HUD_KIND==='field') return;
+  if(HUD_KIND==='field'||LAYOUT.tall) return;
   ctx.fillStyle='#07081A'; ctx.fillRect(0,0,W,FT);
   ctx.fillStyle='#14183A'; ctx.fillRect(0,FT-3,W,3);
   const n=Math.max(9,G.inning), x0=82, cw=Math.min(24,238/n);
@@ -3707,8 +3717,9 @@ function drawWeatherChip(){
   const Wx=WEATHERS[G.weather], wv=G.windV, ws=Math.hypot(wv[0],wv[1]);
   const label=`${Wx.ic} ${Wx.n}${ws>0.5?` ${ws.toFixed(0)}m/s`:''}`;
   ctx.font=`800 13px ${FONT_TC}`; const tw=ctx.measureText(label).width+18;
-  ctx.fillStyle='rgba(7,8,26,.62)'; rr(8,FT+8,tw,24,12); ctx.fill();
-  txt(label,8+tw/2,FT+20.5,13,G.weather==='rain'?'#9FD0FF':G.weather==='dusk'?'#FFC47A':ws>0.5?'#7DFFB0':'#E0E2FF',{w:800});
+  const wy=LAYOUT.tall?LAYOUT.fieldSrc.y+(LAYOUT.ctl.hint.y+20)/HUD_PX:FT+8;
+  ctx.fillStyle='rgba(7,8,26,.62)'; rr(8,wy,tw,24,12); ctx.fill();
+  txt(label,8+tw/2,wy+12.5,13,G.weather==='rain'?'#9FD0FF':G.weather==='dusk'?'#FFC47A':ws>0.5?'#7DFFB0':'#E0E2FF',{w:800});
 }
 function ctlHint(){
   if(G.phase==='cut') return '點擊畫面可略過';
@@ -3720,6 +3731,16 @@ function ctlHint(){
   return '守備中 · 投出好球累積應援能量';
 }
 // landscape: the same buttons, drawn big beside the field for the thumbs
+function drawTallOverlay(){
+  if(!LAYOUT.tall||!G||G.attract) return;
+  const C=LAYOUT.ctl; ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawLandScore(C.sb.x,C.sb.y,C.sb.s);
+  if(G.phase==='lucky'||G.phase==='replay'||G.phase==='trot') return;
+  const fs=C.hint.f; ctx.font=`700 ${fs}px ${FONT_TC}`; ctx.textAlign='left'; ctx.textBaseline='middle';
+  const hs=ctlHint(), hw=Math.min(C.hint.w,ctx.measureText(hs).width)+20;
+  ctx.fillStyle='rgba(7,8,26,.6)'; rr(C.hint.x-10,C.hint.y-fs*0.9,hw,fs*1.8,fs*0.9); ctx.fill();
+  ctx.fillStyle='#E0E2FF'; ctx.fillText(hs,C.hint.x,C.hint.y,C.hint.w-20);
+}
 function drawLandControls(){
   if(!LAYOUT.land||!G||G.attract) return;
   const C=LAYOUT.ctl, at=(c,b,fn)=>{ const k=c.r/b.r; ctx.setTransform(dpr*k,0,0,dpr*k,dpr*(c.x-k*b.x),dpr*(c.y-k*b.y)); fn(); };
@@ -3780,6 +3801,7 @@ function drawSwingBtn(){
 function drawControls(){
   if(HUD_KIND==='field') return;
   if(LAYOUT.land) return;
+  if(LAYOUT.tall){ if(G.attract) return; drawSkillBtn(); if(userBatting()&&G.phase!=='lucky'&&!G.over&&!G.play&&G.phase!=='cut') drawSwingBtn(); return; }
   ctx.fillStyle='#0A0D1E'; ctx.fillRect(0,ST1,W,H-ST1);
   if(G.attract){ txt('台灣職棒夜場 · 熱血應援棒球',250,ST1+32,15,'#A3A6CF',{w:700}); return; }
   drawSkillBtn();
@@ -4130,8 +4152,11 @@ function pitchUI(){ return G&&!G.attract&&!userBatting()&&['choose','aim','gauge
 function joyTarget(){ return userBatting()?G.cursor:G.aim; }
 function pitchBtn(i){
   if(LAYOUT.land) return LAYOUT.ctl.pb(i);
-  const r=40, right=pitchSide()==='right', col=i%2, row=Math.floor(i/2), x0=right?ZONE.x+ZONE.w+16+r:ZONE.x-16-r;
-  return {x:x0+(right?1:-1)*col*(2*r+12),y:ZONE.y+8+row*(2*r+40),r};
+  const n=(curPitcher().arsenal||PT_KEYS).length, right=pitchSide()==='right', room=right?W-(ZONE.x+ZONE.w)-12:ZONE.x-12;
+  const two=room>=2*(2*40)+24, r=two?40:clamp((room-16)/2,30,38), cols=two?2:1, rows=Math.ceil(n/cols), step=2*r+30;
+  const top=Math.min(Math.max(ZC.y-(rows*step-30)/2+r-10,224+r),FB-rows*step), col=i%cols, row=Math.floor(i/cols);
+  const x0=right?ZONE.x+ZONE.w+12+room/2-(cols-1)*(r+6):ZONE.x-12-room/2+(cols-1)*(r+6);
+  return {x:x0+(right?1:-1)*col*(2*r+12),y:top+row*step,r};
 }
 function pickPitch(i){
   const ars=curPitcher().arsenal||PT_KEYS; if(!ars[i]||G.phase!=='choose') return;
@@ -4620,7 +4645,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261009225313', box=document.getElementById('upd');
+  const BUILD='20261009230211', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
