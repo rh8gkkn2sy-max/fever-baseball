@@ -136,6 +136,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
 #scrTitle{background:linear-gradient(180deg,rgba(10,13,30,.7) 0,rgba(10,13,30,0) 26%,rgba(10,13,30,0) 58%,rgba(10,13,30,.94) 80%)}
 #scrTitle h1{text-shadow:0 0 calc(var(--u)*18) rgba(255,178,63,.55),0 calc(var(--u)*3) 0 #1B1203}
 .corner{position:absolute;right:calc(var(--u)*8);width:calc(var(--u)*40);height:calc(var(--u)*40);border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--led);font:700 calc(var(--fu)*19) var(--f-body);cursor:pointer;z-index:5;display:grid;place-items:center;padding:0}
+.ver{font:700 calc(var(--fu)*12) var(--f-body);color:var(--mute);text-align:center;opacity:.8;letter-spacing:.04em}
 #btnSet{top:calc(var(--u)*8 + var(--st,0px))}
 #installGuide{position:absolute;inset:0;z-index:9;background:rgba(5,6,18,.82);display:flex;align-items:center;justify-content:center;padding:calc(var(--u)*20)}
 #installGuide[hidden]{display:none}
@@ -182,6 +183,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>團長語音</span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setVoiceTest">試聽</button><button class="pill sel" id="setVoice">開</button></span></div>
     <div class="setrow"><span>打擊輔助瞄準</span><button class="pill sel" id="setAssist">開</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 1.3（2026.10.09）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -203,6 +205,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
+    <div class="ver">版本 1.3（2026.10.09）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
