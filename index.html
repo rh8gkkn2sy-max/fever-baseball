@@ -38,6 +38,8 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
 #wrap{height:100%;display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:8px;box-sizing:border-box}
 #wrap.land{padding:0}
 #stage.land{border-radius:0;box-shadow:none}
+#wrap.land #stage{border-radius:0;box-shadow:none}
+#wrap.land .scr{padding-top:calc(var(--u)*26 + var(--st,0px))}
 #stage{position:relative;width:360px;height:640px;--u:1px;--fu:1px;border-radius:calc(var(--u)*18);overflow:hidden;box-shadow:0 0 0 1px var(--line),0 20px 80px rgba(0,0,0,.6);background:var(--night-2)}
 #gl,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
 #hud{touch-action:none;user-select:none;-webkit-user-select:none}
@@ -134,7 +136,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
 #scrTitle{background:linear-gradient(180deg,rgba(10,13,30,.7) 0,rgba(10,13,30,0) 26%,rgba(10,13,30,0) 58%,rgba(10,13,30,.94) 80%)}
 #scrTitle h1{text-shadow:0 0 calc(var(--u)*18) rgba(255,178,63,.55),0 calc(var(--u)*3) 0 #1B1203}
 .corner{position:absolute;right:calc(var(--u)*8);width:calc(var(--u)*40);height:calc(var(--u)*40);border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--led);font:700 calc(var(--fu)*19) var(--f-body);cursor:pointer;z-index:5;display:grid;place-items:center;padding:0}
-#btnSet{top:calc(var(--u)*8)}
+#btnSet{top:calc(var(--u)*8 + var(--st,0px))}
 #installGuide{position:absolute;inset:0;z-index:9;background:rgba(5,6,18,.82);display:flex;align-items:center;justify-content:center;padding:calc(var(--u)*20)}
 #installGuide[hidden]{display:none}
 #installGuide .ig{width:min(100%,calc(var(--u)*480));background:var(--panel);border-radius:calc(var(--u)*18);padding:calc(var(--u)*18);display:grid;gap:calc(var(--u)*12);box-shadow:0 0 0 2px var(--led),0 calc(var(--u)*20) calc(var(--u)*60) rgba(0,0,0,.6)}
@@ -147,7 +149,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
 #installGuide .igArrow.top{top:calc(var(--u)*6);bottom:auto;left:auto;right:calc(var(--u)*60);transform:none}
 @keyframes igb{50%{translate:0 calc(var(--u)*10)}}
 #stage.land .corner{right:calc(var(--u)*8 + var(--sr,0px))}
-#btnFull{top:calc(var(--u)*54)}
+#btnFull{top:calc(var(--u)*54 + var(--st,0px))}
 .corner:focus-visible{outline:2px solid var(--led);outline-offset:2px}
 #scrSet{z-index:7;background:rgba(10,13,30,.96)}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:calc(var(--u)*12);background:var(--panel);border-radius:calc(var(--u)*12);padding:calc(var(--u)*12) calc(var(--u)*14);font-size:calc(var(--fu)*16);font-weight:700;box-shadow:inset 0 0 0 1px var(--line)}
@@ -303,6 +305,12 @@ function persist(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(SAVE)); }
    Audio: generated drums, crowd, bat, light-show music
    ========================================================= */
 const AU={ctx:null,on:true,master:null,nb:null};
+// a short buzz: the Vibration API where it exists, the iOS 18 switch-control tick on iPhone
+const HAP={el:null};
+function haptic(ms){
+  try{ if(navigator.vibrate){ navigator.vibrate(ms); return; } }catch(e){}
+  try{ if(!HAP.el){ const l=document.createElement('label'), i=document.createElement('input'); i.type='checkbox'; i.setAttribute('switch',''); l.appendChild(i); l.style.cssText='position:fixed;left:-200px;top:0;opacity:0;pointer-events:none'; document.body.appendChild(l); HAP.el=l; } HAP.el.click(); }catch(e){}
+}
 function audioInit(){
   if(window.speechSynthesis&&!AU.ttsOK){ try{ const u=new SpeechSynthesisUtterance('嗨'); u.volume=0.01; u.rate=2; u.lang='zh-TW'; u.onstart=()=>{ AU.ttsOK=true; }; AU.ttsU=u; speechSynthesis.speak(u); }catch(e){} }
   if(AU.ctx){
@@ -555,7 +563,11 @@ function musicBeat(){ const c=AU.ctx; if(!c||!MUS.cur) return null; return Math.
 
 /* ---------- cheer captain voice ---------- */
 const VOICE={v:null};
-function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); VOICE.none=vs.length>0&&!vs.some(v=>/^zh/i.test(v.lang)); VOICE.v=vs.find(v=>/zh[-_]TW/i.test(v.lang))||vs.find(v=>/zh[-_]HK/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null; }catch(e){} }
+function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); VOICE.none=vs.length>0&&!vs.some(v=>/^zh/i.test(v.lang));
+  // prefer the downloaded high-quality voices (iOS "Enhanced/Premium", Edge "Natural")
+  const score=v=>(/zh[-_]TW/i.test(v.lang)?30:/zh[-_]HK/i.test(v.lang)?10:/^zh/i.test(v.lang)?5:-99)+(/premium|高品質|頂級/i.test(v.name)?24:0)+(/enhanced|增強|加強|優化/i.test(v.name)?18:0)+(/natural|neural|online/i.test(v.name)?20:0)+(v.localService===false?2:0);
+  VOICE.v=vs.filter(v=>/^zh/i.test(v.lang)).sort((a,b)=>score(b)-score(a))[0]||null;
+  VOICE.hq=!!(VOICE.v&&/premium|enhanced|增強|加強|優化|高品質|頂級|natural|neural|online/i.test(VOICE.v.name)); }catch(e){} }
 if(window.speechSynthesis){ pickVoice(); try{ speechSynthesis.onvoiceschanged=pickVoice; }catch(e){} }
 // iOS drops an utterance queued right after cancel(), and garbage-collects ones nobody holds
 function speakNow(text,rate){
@@ -569,13 +581,13 @@ function speakNow(text,rate){
   if(S.speaking||S.pending){ S.cancel(); setTimeout(()=>{ try{ S.speak(u); }catch(e){} },90); }
   else S.speak(u);
 }
-function leaderShout(text,force,crowdEcho){
+function leaderShout(text,force,crowdEcho,rate){
   if(!AU.on||!AU.ctx||!G||G.attract) return;
   G.shout={txt:text.replace(/[　 ]+/g,' '),t:0};
   if(SAVE.settings&&SAVE.settings.voice===false) return;
   const now=performance.now(); if(!force&&now-MUS.lastShout<2400) return; MUS.lastShout=now;
   if(window.speechSynthesis&&(VOICE.v||VOICE.none!==true)){
-    try{ speakNow(text,1.08); }catch(e){}
+    try{ speakNow(text,rate||1.08); }catch(e){}
   }
   // the stands answer the call
   if(force&&crowdEcho!==false){ const t=AU.ctx.currentTime+Math.min(3.5,.4+text.length*.2); for(let k=0;k<2;k++) INS.shout(t+k*.24,.22,'e'); }
@@ -1052,9 +1064,21 @@ function resize(){
   let aw=wrap.clientWidth-32, ah=wrap.clientHeight-16;
   const land=aw>ah*1.45&&aw>=560;
   // landscape is edge to edge: no padding, no frame
-  wrap.classList.toggle('land',land); if(land){ aw=wrap.clientWidth; ah=wrap.clientHeight; }
+  // a phone held upright that is taller than the layout: go edge to edge and give the extra height to the field
+  const fw0=wrap.clientWidth, fh0=wrap.clientHeight, tall=!land&&fw0<=640&&fh0/fw0>=H/W-0.01;
+  wrap.classList.toggle('land',land||tall); if(land){ aw=wrap.clientWidth; ah=wrap.clientHeight; }
+  const se0=getComputedStyle(document.getElementById('safe')), iT=parseFloat(se0.paddingTop)||0, iB0=parseFloat(se0.paddingBottom)||0;
+  stageEl.style.setProperty('--st',(tall?iT:0)+'px');
   let w,h;
-  if(!land){
+  if(tall){
+    w=fw0; h=fh0; const s=w/W, botH=(H-FB)*s, fH=h-iT-iB0-FT*s-botH, ext=fH/s-(FB-FT);
+    const fsrc={x:0,y:FT-ext/2,w:W,h:FB-FT+ext};
+    LAYOUT={land:false,tall:true,fieldSrc:fsrc,regions:[
+      {kind:'field',src:fsrc,dst:{x:0,y:iT+FT*s,w,h:fH},s},
+      {kind:'top',src:{x:0,y:0,w:W,h:FT},dst:{x:0,y:iT,w,h:FT*s},s},
+      {kind:'bottom',src:{x:0,y:FB,w:W,h:H-FB},dst:{x:0,y:h-iB0-botH,w,h:botH},s}]};
+    stageEl.style.setProperty('--u',s+'px');
+  }else if(!land){
     w=Math.max(200,Math.min(aw,ah*W/H)); h=w*H/W;
     LAYOUT={land:false,fieldSrc:null,regions:[{src:{x:0,y:0,w:W,h:H},dst:{x:0,y:0,w,h},s:w/W}]};
     stageEl.style.setProperty('--u',(w/W)+'px');
@@ -1064,11 +1088,12 @@ function resize(){
     const fs=h/(FB-FT), fw=W*fs, side=Math.max(0,(w-fw)/2), fsrc={x:W/2-w/2/fs,y:FT,w:w/fs,h:FB-FT};
     const se=getComputedStyle(document.getElementById('safe')), iL=parseFloat(se.paddingLeft)||0, iR=parseFloat(se.paddingRight)||0, iB=Math.min(18,parseFloat(se.paddingBottom)||0);
     stageEl.style.setProperty('--sr',iR+'px');
-    const sbS=clamp(Math.min((side-16)/236,h/430),0.55,1), hintY=10+70*sbS+16, hintF=clamp(h/26,12,16);
-    // left thumb: joystick and cheer button; the squad dances above them
-    const jr=clamp(Math.min(h*0.19,side*0.3),34,78), joy={x:iL+16+jr,y:h-iB-12-jr,r:jr};
-    const kr=clamp(jr*0.62,24,48), skill={x:joy.x+jr+12+kr,y:h-iB-12-kr,r:kr};
-    const sqTop=hintY+hintF, sqH=Math.max(0,joy.y-jr-8-sqTop), sqW=Math.max(side+30,sqH*2.1);
+    const sbS=clamp(Math.min((side-16)/236,h/430),0.55,1), hintY=10+70*sbS+22, hintF=clamp(h/26,12,16);
+    // the squad dances in the bottom-left corner; the left thumb's joystick and cheer button sit above it
+    const sqH=clamp(h*0.3,64,150), sqW=Math.max(side+30,sqH*2.2), sqTop=h-iB-sqH;
+    const room=sqTop-(hintY+hintF*0.9), jr=clamp(Math.min(h*0.16,side*0.28,room/2-6),30,72);
+    const joy={x:iL+16+jr,y:hintY+hintF*0.9+room/2,r:jr};
+    const kr=clamp(jr*0.66,24,46), skill={x:joy.x+jr+14+kr,y:joy.y+jr-kr,r:kr};
     // right thumb: swing, or the pitch buttons when pitching
     const sr=clamp(Math.min(h*0.2,side*0.36),32,84), swing={x:w-iR-16-sr,y:h-iB-12-sr,r:sr};
     const pr=clamp(Math.min(h*0.1,side*0.14),22,42), pgap=2*pr+14, prow=2*pr+Math.max(16,pr*0.55);
@@ -1087,12 +1112,13 @@ function resize(){
   dpr=Math.min(2,window.devicePixelRatio||1);
   hud.width=Math.round(w*dpr); hud.height=Math.round(h*dpr);
   cssW=w; cssH=h; scale=LAYOUT.regions[LAYOUT.regions.length-1].s;
+  if(window.ZOOM_READY) applyZoom(land?1.5:1.15);
   if(renderer){ renderer.setPixelRatio(Math.min(dpr,1.75)); renderer.setSize(w,h,false); }
 }
 // where a rectangle of the portrait layout lands on screen, in CSS pixels
 const FX=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.x:0, FWD=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.w:W;
 function cssRect(r){
-  const R=LAYOUT.regions.find(R=>r.y>=R.src.y-0.5&&r.y+r.h<=R.src.y+R.src.h+0.5)||LAYOUT.regions[0];
+  const R=LAYOUT.regions.filter(R=>r.y>=R.src.y-0.5&&r.y+r.h<=R.src.y+R.src.h+0.5).sort((a,b)=>a.src.h-b.src.h)[0]||LAYOUT.regions[0];
   return {x:R.dst.x+(r.x-R.src.x)*R.s,y:R.dst.y+(r.y-R.src.y)*R.s,w:r.w*R.s,h:r.h*R.s};
 }
 window.addEventListener('resize',resize); resize();
@@ -1100,8 +1126,10 @@ if(window.ResizeObserver) new ResizeObserver(resize).observe(document.getElement
 
 const FONT_TC='"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
 const FONT_D='"Bungee","Noto Sans TC",sans-serif';
+let HUD_PX=1;
 function txt(s,x,y,size,color,opt){
   opt=opt||{};
+  if(size<=26) size*=clamp(13/(size*HUD_PX),1,1.35);
   ctx.font=`${opt.w||900} ${size}px ${opt.d?FONT_D:FONT_TC}`;
   ctx.textAlign=opt.a||'center'; ctx.textBaseline=opt.b||'middle';
   if(opt.stroke){ ctx.lineWidth=opt.stroke; ctx.strokeStyle=opt.sc||'#000'; ctx.lineJoin='round'; ctx.strokeText(s,x,y); }
@@ -2098,6 +2126,23 @@ function computeZone(){
   ZONE={x:a.x,y:a.y,w:b.x-a.x,h:b.y-a.y}; ZC={x:a.x+ZONE.w/2,y:a.y+ZONE.h/2};
 }
 computeZone();
+// zoom toward the strike zone (landscape a lot, portrait a little); cam copies it in the batting view
+const ZOOM={z:1,ox:0,oy:0};
+function applyZoom(z){
+  batCam.clearViewOffset(); batCam.updateProjectionMatrix(); computeZone();
+  const cx=ZC.x/W, cy=(ZC.y-FT)/(FB-FT), ty=Math.min(cy,0.64);
+  ZOOM.z=z; ZOOM.ox=cx*z-cx; ZOOM.oy=cy*z-ty;
+  if(z>1){ const a=batCam.aspect, w=1000*a, h=1000; batCam.setViewOffset(w*z,h*z,w*ZOOM.ox,h*ZOOM.oy,w,h); batCam.updateProjectionMatrix(); }
+  computeZone();
+  if(typeof G!=='undefined'&&G){ G.cursor.x=ZC.x; G.cursor.y=ZC.y; G.aim.x=ZC.x; G.aim.y=ZC.y; }
+}
+function zoomCam(c,on,fsrc){
+  if(!on||ZOOM.z<=1){ if(c.view&&c.view.enabled){ c.clearViewOffset(); c.updateProjectionMatrix(); } return; }
+  const ex=(fsrc.w/W-1)/2, ey=(fsrc.h/(FB-FT)-1)/2, z=ZOOM.z, w=1000*c.aspect, h=1000;
+  const x=w/(1+2*ex)*(ex*(z-1)+ZOOM.ox), y=h/(1+2*ey)*(ey*(z-1)+ZOOM.oy);
+  c.setViewOffset(w*z,h*z,x,y,w,h); c.updateProjectionMatrix();
+}
+window.ZOOM_READY=true; applyZoom(LAYOUT.land?1.5:1.15);
 const FPOS=[[0,18.44],[34,27],[13,40],[-13,40],[-34,27],[-28,88],[0,100],[28,88]];
 const POS_SLOT={'一壘手':1,'二壘手':2,'游擊手':3,'三壘手':4,'左外野手':5,'中外野手':6,'右外野手':7};
 let FIGS={};
@@ -2679,7 +2724,7 @@ function impact(p0,q,res,user){
   sfx(big?'crackBig':'crack'); if(big) sfx('roar');
   if(user){
     popup(big?'PERFECT!':good?'GREAT':'GOOD',{size:big?46:34,color:big?'#FFD54A':good?'#7CFF8A':'#9FE3FF',y:250,dur:900});
-    try{ if(navigator.vibrate) navigator.vibrate(big?[25,30,70]:good?40:15); }catch(e){}
+    haptic(big?[25,30,70]:good?40:15);
   }
   if(res==='HR') G.batFlip={t:0};
 }
@@ -2778,7 +2823,7 @@ function update(dt){
   // the captain calls each line as the band reaches it
   if(userBatting()&&!G.attract&&G.lyrics&&(G.phase==='cut'&&G.cut&&G.cut.type==='cheer'||['wait','windup','flight'].includes(G.phase))){
     const kr=karaoke();
-    if(kr&&kr.bar!==G.lastKBar){ G.lastKBar=kr.bar; if(kr.bar%2===0&&kr.n<=1) leaderShout(G.lyrics[kr.bar]+(G.lyrics[kr.bar+1]?'，'+G.lyrics[kr.bar+1]:''),G.phase==='cut',false); }
+    if(kr&&kr.bar!==G.lastKBar){ G.lastKBar=kr.bar; const line=G.lyrics[kr.bar%G.lyrics.length]; if(line&&kr.n<=1) leaderShout(line,true,false,1.22); }
   }
   updateFigures(dt/1000);
   updateSquads(dt/1000);
@@ -3284,6 +3329,7 @@ function stageCutCam(c){
 /* =========================================================
    Render
    ========================================================= */
+let HUD_KIND='all';
 function render(){
   if(renderer&&TITLE.scene&&!$('scrTitle').hidden){ renderTitle(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,hud.width,hud.height); return; }
   if(renderer&&G){
@@ -3291,8 +3337,11 @@ function render(){
     const vp=r=>{ const c=cssRect(r); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h); };
     renderer.setViewport(0,0,cssW,cssH); renderer.setScissor(0,0,cssW,cssH); renderer.setClearColor(0x0a0d1e,1); renderer.clear();
     const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type));
-    const fsrc=LAYOUT.fieldSrc||{x:0,y:FT,w:W,h:FB-FT}, asp=fsrc.w/fsrc.h;
-    if(Math.abs(cam.aspect-asp)>1e-4){ cam.aspect=asp; cam.updateProjectionMatrix(); cutCam.aspect=asp; cutCam.updateProjectionMatrix(); }
+    const fsrc=LAYOUT.fieldSrc||{x:0,y:FT,w:W,h:FB-FT}, asp=fsrc.w/fsrc.h, vk=fsrc.h/(FB-FT);
+    if(Math.abs(cam.aspect-asp)>1e-4||cam.vk!==vk){ cam.vk=vk;
+      cam.fov=2*Math.atan(Math.tan(36*D2R/2)*vk)/D2R; cam.aspect=asp; cam.updateProjectionMatrix();
+      cutCam.fov=2*Math.atan(Math.tan(34*D2R/2)*vk)/D2R; cutCam.aspect=asp; cutCam.updateProjectionMatrix(); }
+    zoomCam(cam,G.camMode==='bat',fsrc);
     vp(fsrc);
     if(stageView&&S3.squads){
       const side=(G.cut&&G.cut.data&&G.cut.data.side)||'home';
@@ -3316,6 +3365,7 @@ function render(){
   if(!G) return;
   // the HUD is drawn in portrait coordinates and mapped into each screen region
   LAYOUT.regions.forEach(R=>{
+    HUD_KIND=R.kind||'all'; HUD_PX=R.s;
     ctx.save();
     ctx.setTransform(dpr*R.s,0,0,dpr*R.s,dpr*(R.dst.x-R.src.x*R.s),dpr*(R.dst.y-R.src.y*R.s));
     ctx.beginPath(); ctx.rect(R.src.x,R.src.y,R.src.w,R.src.h); ctx.clip();
@@ -3330,6 +3380,7 @@ function render(){
     drawWeatherChip();
     ctx.restore();
   });
+  HUD_PX=1;
   drawLandControls();
 }
 /* =========================================================
@@ -3347,6 +3398,7 @@ function inRect(p,r){ return p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h; }
 function suggestCloser(){ if(userBatting()||G.attract) return false; const T=G.home, lead=G.score.home-G.score.away; return G.inning>=9&&lead>=1&&lead<=3&&T.pitcher.role!=='CL'&&T.pen.includes(3); }
 
 function drawScoreboard(){
+  if(HUD_KIND==='field') return;
   ctx.fillStyle='#07081A'; ctx.fillRect(0,0,W,FT);
   ctx.fillStyle='#14183A'; ctx.fillRect(0,FT-3,W,3);
   const n=Math.max(9,G.inning), x0=82, cw=Math.min(24,238/n);
@@ -3632,6 +3684,7 @@ function drawPopups(){
   });
 }
 function drawStageHud(){
+  if(HUD_KIND==='field') return;
   ctx.fillStyle='#0B0812'; ctx.fillRect(0,FB,W,ST0-FB);
   ctx.save(); ctx.beginPath(); ctx.rect(0,FB,W,ST0-FB); ctx.clip();
   ctx.font=`900 20px ${FONT_TC}`; const s=G.marq.s+'　　★　　', w=ctx.measureText(s).width||1;
@@ -3679,7 +3732,7 @@ function drawLandControls(){
   if(pitchUI()){ const ars=curPitcher().arsenal||PT_KEYS; ars.forEach((k,i)=>drawPitchBtn(k,i,C.pb(i),Math.max(13,C.pr*0.38)));
     if(G.phase==='choose'){ const pn=C.pen, sug=suggestCloser(), pulse=.5+.5*Math.sin(G.clock/160); ctx.fillStyle=sug?`rgba(255,61,127,${.6+.4*pulse})`:'rgba(7,8,26,.8)'; rr(pn.x,pn.y,pn.w,pn.h,pn.h/2); ctx.fill(); ctx.strokeStyle='#FF3D7F'; ctx.lineWidth=2; ctx.stroke(); txt(sug?'派出終結者':'換投手',pn.x+pn.w/2,pn.y+pn.h/2+1,Math.max(13,pn.h*0.5),'#fff'); } }
   drawLandScore(C.sb.x,C.sb.y,C.sb.s);
-  at(C.skill,BTN.skill,drawSkillBtn);
+  if(G.phase!=='lucky') at(C.skill,BTN.skill,drawSkillBtn);
   if(userBatting()&&G.phase!=='lucky'&&!G.over&&!G.play&&G.phase!=='cut') at(C.swing,BTN.swing,drawSwingBtn);
   ctx.setTransform(dpr,0,0,dpr,0,0);
   const fs=C.hint.f;
@@ -3722,6 +3775,7 @@ function drawSwingBtn(){
   txt('揮棒',s.x,s.y-5,22,'#fff'); txt('SPACE',s.x,s.y+17,10,'#FFD0E0',{d:1,w:400});
 }
 function drawControls(){
+  if(HUD_KIND==='field') return;
   if(LAYOUT.land) return;
   ctx.fillStyle='#0A0D1E'; ctx.fillRect(0,ST1,W,H-ST1);
   if(G.attract){ txt('台灣職棒夜場 · 熱血應援棒球',250,ST1+32,15,'#A3A6CF',{w:700}); return; }
@@ -3734,22 +3788,24 @@ function drawControls(){
    placed around the screen, each with a shrinking approach ring
    ========================================================= */
 const RJ={great:70,good:140,ok:200};
-const APPROACH=900, NOTE_R=40;
+// rhythm time follows the band: milliseconds since the lucky song's first beat, as heard
+function lkT(){ const c=AU.ctx; if(c&&MUS.cur&&MUS.cur.key==='lucky') return (c.currentTime-(c.outputLatency||0)-MUS.cur.t0)*1000; return G.t-60; }
+const APPROACH=900; let NOTE_R=40;
 function buildChart(bpm,lead,T){
-  const beat=60000/bpm, notes=[]; let pos={x:270,y:400}, ang=-0.6, num=1;
-  const A={x0:80,x1:460,y0:FT+110,y1:FB-120};
+  const beat=60000/bpm, notes=[]; let pos={x:LAYOUT.land&&LAYOUT.fieldSrc?LAYOUT.fieldSrc.x+LAYOUT.fieldSrc.w*0.3:270,y:400}, ang=-0.6, num=1;
+  const F=LAYOUT.fieldSrc, A=LAYOUT.land&&F?{x0:F.x+F.w*0.2,x1:F.x+F.w*0.8,y0:FT+110,y1:FB-110}:{x0:80,x1:460,y0:FT+110,y1:FB-120}, sc=NOTE_R/40;
   const nextPos=d=>{ ang+=(rnd()-.5)*2.0; let x=pos.x+Math.cos(ang)*d, y=pos.y+Math.sin(ang)*d;
     if(x<A.x0||x>A.x1){ ang=Math.PI-ang; x=clamp(x,A.x0,A.x1); } if(y<A.y0||y>A.y1){ ang=-ang; y=clamp(y,A.y0,A.y1); }
     pos={x,y}; return {x,y}; };
   const n=T.name, words=[n[0],n[1],'加','油','衝','啊','嘿','喔','全','壘','打'];
   let wi=0; const lab=()=>words[(wi++)%words.length];
   const T_=b=>lead+b*beat;
-  const tap=b=>{ const p=nextPos(95); notes.push({type:'tap',t:T_(b),x:p.x,y:p.y,num:num++,label:lab()}); };
-  const hold=(b,len)=>{ const p=nextPos(100); notes.push({type:'hold',t:T_(b),dur:len*beat,x:p.x,y:p.y,num:num++,label:'長按'}); };
-  const slide=(b,len)=>{ const a=nextPos(95), sx=a.x, sy=a.y, e=nextPos(170), m={x:(sx+e.x)/2+(rnd()-.5)*140,y:(sy+e.y)/2+(rnd()-.5)*140};
+  const tap=b=>{ const p=nextPos(95*sc); notes.push({type:'tap',t:T_(b),x:p.x,y:p.y,num:num++,label:lab()}); };
+  const hold=(b,len)=>{ const p=nextPos(100*sc); notes.push({type:'hold',t:T_(b),dur:len*beat,x:p.x,y:p.y,num:num++,label:'長按'}); };
+  const slide=(b,len)=>{ const a=nextPos(95*sc), sx=a.x, sy=a.y, e=nextPos(190*sc), m={x:(sx+e.x)/2+(rnd()-.5)*150*sc,y:(sy+e.y)/2+(rnd()-.5)*140};
     notes.push({type:'slide',t:T_(b),dur:len*beat,x:sx,y:sy,ex:e.x,ey:e.y,cx:clamp(m.x,A.x0,A.x1),cy:clamp(m.y,A.y0,A.y1),num:num++,label:'滑'}); };
   const mash=(b,len,need)=>notes.push({type:'mash',t:T_(b),dur:len*beat,x:270,y:(FT+FB)/2+10,need,num:num++,label:'連打'});
-  const swipe=(b,dir)=>{ const p=nextPos(95); notes.push({type:'swipe',t:T_(b),x:p.x,y:p.y,dir,num:num++,label:''}); };
+  const swipe=(b,dir)=>{ const p=nextPos(95*sc); notes.push({type:'swipe',t:T_(b),x:p.x,y:p.y,dir,num:num++,label:''}); };
   [0,1,2,3].forEach(tap);
   [4,5,6,6.5,7].forEach(tap);
   hold(8,2); tap(10); tap(11);
@@ -3765,9 +3821,9 @@ function buildChart(bpm,lead,T){
 const DIRV={r:[1,0],l:[-1,0],u:[0,-1],d:[0,1]};
 function slidePos(n,u){ u=clamp(u,0,1); const a=1-u; return {x:a*a*n.x+2*a*u*n.cx+u*u*n.ex,y:a*a*n.y+2*a*u*n.cy+u*u*n.ey}; }
 function startLucky(){
-  const T=G.home;
-  const ch=buildChart(132,2400,T);
-  G.lk={notes:ch.notes,end:ch.end,score:0,combo:0,maxCombo:0,counts:{great:0,good:0,ok:0,miss:0},fx:[],down:false,px:0,py:0,done:false,
+  const T=G.home; NOTE_R=LAYOUT.land?54:40;
+  const ch=buildChart(132,4*60000/132,T);
+  G.lk={notes:ch.notes,end:ch.end,score:0,combo:0,maxCombo:0,counts:{great:0,good:0,ok:0,miss:0},fx:[],parts:[],rings:[],shake:0,lead:4*60000/132,down:false,px:0,py:0,done:false,
     win:G.passive&&G.passive.rhythm?1.4:1};
   G.phase='lucky'; G.t=0;
   setMarquee(`幸運七局！　全場起立　${T.call}`); setMood('skill',99999);
@@ -3783,12 +3839,21 @@ function award(n,r,x,y){
   const L=G.lk; n.res=r; L.counts[r]++;
   if(r==='miss'){ L.combo=0; }
   else { L.combo++; L.maxCombo=Math.max(L.maxCombo,L.combo); L.score+={great:300,good:100,ok:50}[r]*(1+Math.min(L.combo,50)/50); }
-  L.fx.push({x:x==null?n.x:x,y:y==null?n.y:y,r,t:0});
+  const fx0=x==null?n.x:x, fy0=y==null?n.y:y;
+  L.fx.push({x:fx0,y:fy0,r,t:0});
+  if(r!=='miss'){ const col={great:'#FFD54A',good:'#7CFF8A',ok:'#9FE3FF'}[r], N=r==='great'?22:14;
+    burst(fx0,fy0,N,col,r==='great'?1.25:1);
+    L.rings.push({x:fx0,y:fy0,t:0,c:col,r0:NOTE_R});
+    L.shake=Math.max(L.shake,r==='great'?7:3); haptic(r==='great'?22:12);
+    if(r==='great') G.flash=Math.max(G.flash||0,.12);
+    if(L.combo>0&&L.combo%10===0){ popup(`${L.combo} COMBO!`,{color:'#FFD54A',size:44,y:FT+130,dur:900}); haptic([20,40,20]); burst(270,FT+130,30,'#FFD54A',1.6); }
+  }
   if(r!=='miss'){ if(AU.ctx&&AU.mus){ const t=AU.ctx.currentTime; INS.clap(t,.35); if(r==='great') INS.taiko(t,.4); } }
 }
+function burst(x,y,n,c,k){ const L=G.lk; for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, sc=NOTE_R/40, sp=(.18+rnd()*.42)*(k||1)*sc; L.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-.05,life:420+rnd()*320,t:0,c,s:(3+rnd()*4*(k||1))*sc,star:rnd()<.35}); } }
 function activeNotes(){ return G.lk.notes.filter(n=>!n.res&&!n.live); }
 function rhythmDown(x,y,kbd){
-  const L=G.lk; if(!L||L.done) return; const t=G.t; L.down=true; L.px=x; L.py=y; L.kbd=!!kbd;
+  const L=G.lk; if(!L||L.done) return; const t=lkT(); L.down=true; L.rings.push({x,y,t:0,c:'#ffffff',r0:14,small:1}); L.px=x; L.py=y; L.kbd=!!kbd;
   const mash=L.notes.find(n=>n.type==='mash'&&!n.res&&t>=n.t-80&&t<=n.t+n.dur);
   if(mash){ mash.hits=(mash.hits||0)+1; mash.pulse=1; if(AU.ctx&&AU.mus) INS.taiko(AU.ctx.currentTime,.35); return; }
   let best=null,bd=1e9;
@@ -3819,7 +3884,7 @@ function rhythmMove(x,y){
   }
 }
 function rhythmUp(){
-  const L=G.lk; if(!L) return; L.down=false; const t=G.t;
+  const L=G.lk; if(!L) return; L.down=false; const t=lkT();
   for(const n of L.notes){
     if(!n.live||n.res) continue;
     if(n.type==='hold'){ n.live=false; const left=n.t+n.dur-t; award(n,left<120*L.win?n.startRes:left<n.dur*.5?'ok':'miss'); }
@@ -3831,19 +3896,23 @@ function rhythmKey(code,down){
   const L=G.lk; if(!L) return;
   const dir={ArrowRight:'r',ArrowLeft:'l',ArrowUp:'u',ArrowDown:'d'}[code];
   if(down&&dir){
-    const n=L.notes.find(q=>q.type==='swipe'&&!q.res&&(q.live||Math.abs(G.t-q.t)<=RJ.ok*L.win));
-    if(n){ if(!n.live){ n.startRes=judge(n,G.t-n.t); } finishSwipe(n,dir); }
+    const n=L.notes.find(q=>q.type==='swipe'&&!q.res&&(q.live||Math.abs(lkT()-q.t)<=RJ.ok*L.win));
+    if(n){ if(!n.live){ n.startRes=judge(n,lkT()-n.t); } finishSwipe(n,dir); }
     return;
   }
   if(code==='Space'||code==='KeyJ'||code==='Enter'){ if(down) rhythmDown(0,0,true); else rhythmUp(); }
 }
+function hudCol(){ return G.home.hud; }
 function updateLucky(dt){
-  const L=G.lk, t=G.t;
+  const L=G.lk, t=lkT();
   for(const n of L.notes){
     if(n.res) continue;
+    if(n.live&&n.type==='hold'){ const q=Math.floor((t-n.t)/(60000/132)); if(q!==n.q&&q>0){ n.q=q; L.rings.push({x:n.x,y:n.y,t:0,c:hudCol(),r0:NOTE_R}); haptic(8); burst(n.x,n.y,6,'#ffffff',.7); } }
     if(n.live&&n.type==='hold'&&t>=n.t+n.dur){ n.live=false; award(n,n.startRes); }
     if(n.live&&n.type==='slide'){
-      const u=(t-n.t)/n.dur, p=slidePos(n,u); n.samples++; if(L.kbd||Math.hypot(L.px-p.x,L.py-p.y)<NOTE_R*1.7) n.inside++;
+      const u=(t-n.t)/n.dur, p=slidePos(n,u), onIt=L.kbd||Math.hypot(L.px-p.x,L.py-p.y)<NOTE_R*1.7; n.samples++; if(onIt) n.inside++;
+      if(onIt){ for(let i=0;i<2;i++) L.parts.push({x:p.x+(rnd()-.5)*20,y:p.y+(rnd()-.5)*20,vx:(rnd()-.5)*.1,vy:(rnd()-.5)*.1,life:380,t:0,c:i?'#ffffff':hudCol(),s:3+rnd()*4,star:true});
+        const q=Math.floor(u*4); if(q!==n.q&&q>0&&q<4){ n.q=q; L.rings.push({x:p.x,y:p.y,t:0,c:hudCol(),r0:NOTE_R*.8}); haptic(8); if(AU.ctx&&AU.mus) INS.clap(AU.ctx.currentTime,.22); } }
       if(u>=1){ n.live=false; const frac=n.inside/n.samples; award(n,frac>.75?n.startRes:frac>.45?'ok':'miss',p.x,p.y); }
     }
     if(n.live&&n.type==='swipe'&&t-n.st>450){ n.live=false; award(n,'miss'); }
@@ -3852,6 +3921,8 @@ function updateLucky(dt){
     if(n.pulse) n.pulse=Math.max(0,n.pulse-dt/150);
   }
   L.fx.forEach(f=>f.t+=dt); L.fx=L.fx.filter(f=>f.t<600);
+  L.parts.forEach(p=>{ p.t+=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=.0004*dt; p.vx*=.985; }); L.parts=L.parts.filter(p=>p.t<p.life);
+  L.rings.forEach(r=>r.t+=dt); L.rings=L.rings.filter(r=>r.t<420); L.shake*=Math.pow(.86,dt/16);
   if(t>L.end&&!L.done){
     L.done=true; G.luckyDone=true;
     const c=L.counts, total=c.great+c.good+c.ok+c.miss, acc=total?(c.great+c.good*.6+c.ok*.3)/total:0;
@@ -3865,12 +3936,13 @@ function updateLucky(dt){
   }
 }
 function drawLucky(){
-  const L=G.lk; if(!L) return; const t=G.t, T=G.home, hud=T.hud;
+  const L=G.lk; if(!L) return; const t=lkT(), T=G.home, hud=T.hud;
+  ctx.save(); if(L.shake>0.2) ctx.translate((rnd()-.5)*L.shake,(rnd()-.5)*L.shake);
   ctx.fillStyle='rgba(7,8,26,.22)'; ctx.fillRect(FX(),FT,FWD(),FB-FT);
-  txt('幸運七局',20,FT+28,26,hud,{a:'left',stroke:5,sc:'#07081A'});
+  txt('幸運七局',LAYOUT.land?270:20,FT+28,26,hud,{a:LAYOUT.land?'center':'left',stroke:5,sc:'#07081A'});
   txt(`${Math.round(L.score)}`,W-20,FT+26,24,'#fff',{a:'right',d:1,w:400,stroke:4,sc:'#07081A'});
   if(L.combo>1) txt(`${L.combo} COMBO`,W-20,FT+54,16,'#FFD54A',{a:'right',d:1,w:400,stroke:3,sc:'#07081A'});
-  if(t<2200){ txt('跟著鼓點！',270,FT+150,30,'#fff',{stroke:6,sc:'#07081A'}); txt('點擊・長按・滑動・連打・甩動',270,FT+190,15,hud,{stroke:4,sc:'#07081A',w:700}); }
+  if(t<L.lead){ txt('跟著鼓點！',270,FT+150,30,'#fff',{stroke:6,sc:'#07081A'}); txt('點擊・長按・滑動・連打・甩動',270,FT+190,15,hud,{stroke:4,sc:'#07081A',w:700}); }
   const vis=L.notes.filter(n=>!n.res&&t>=n.t-APPROACH&&(t<=n.t+(n.dur||0)+RJ.ok*L.win)).sort((a,b)=>b.t-a.t);
   for(const n of vis){
     const k=clamp((n.t-t)/APPROACH,0,1), fade=clamp(1-k*1.3+.3,0,1);
@@ -3901,7 +3973,12 @@ function drawLucky(){
     if(t<n.t){ ctx.strokeStyle=hud; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(n.x,n.y,NOTE_R*(1+k*2),0,Math.PI*2); ctx.stroke(); }
     ctx.globalAlpha=1;
   }
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  L.rings.forEach(r=>{ const u=r.t/420; ctx.globalAlpha=(1-u)*(r.small?.5:.9); ctx.strokeStyle=r.c; ctx.lineWidth=(r.small?3:8)*(1-u)+1; ctx.beginPath(); ctx.arc(r.x,r.y,r.r0+u*(r.small?30:70),0,Math.PI*2); ctx.stroke(); });
+  L.parts.forEach(p=>{ const a=1-p.t/p.life; ctx.globalAlpha=a; ctx.fillStyle=p.c; if(p.star){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.t/90); const s2=p.s*1.3; ctx.beginPath(); for(let i=0;i<8;i++){ const rr2=i%2?s2*.4:s2, an=i*Math.PI/4; ctx.lineTo(Math.cos(an)*rr2,Math.sin(an)*rr2); } ctx.closePath(); ctx.fill(); ctx.restore(); } else { ctx.beginPath(); ctx.arc(p.x,p.y,p.s*a+1,0,Math.PI*2); ctx.fill(); } });
+  ctx.restore(); ctx.globalAlpha=1;
   L.fx.forEach(f=>{ const a=1-f.t/600; ctx.globalAlpha=a; const c={great:'#FFD54A',good:'#7CFF8A',ok:'#9FE3FF',miss:'#FF6A6A'}[f.r]; txt({great:'GREAT',good:'GOOD',ok:'OK',miss:'MISS'}[f.r],f.x,f.y-NOTE_R-12-f.t/30,18,c,{d:1,w:400,stroke:4,sc:'#07081A'}); ctx.globalAlpha=1; });
+  ctx.restore();
 }
 /* =========================================================
    Card portraits: each player or cheer girl is posed in a tiny studio
@@ -4270,7 +4347,7 @@ $('btnSet').onclick=openSettings;
 $('btnFull').onclick=()=>{ audioInit(); toggleFull(); };
 $('setFull').onclick=toggleFull;
 $('setSound').onclick=()=>{ SAVE.settings.sound=!SAVE.settings.sound; AU.on=SAVE.settings.sound; if(!AU.on) try{ speechSynthesis.cancel(); }catch(e){} persist(); renderSettings(); };
-$('setVoiceTest').onclick=()=>{ audioInit(); pickVoice(); try{ speakNow('大家好，我是應援團長！全場一起加油！',1.05); $('setNote').textContent=VOICE.v?`使用語音：${VOICE.v.name}`:'正在用系統預設的中文語音。iPhone 若沒聲音，請關閉側邊的靜音開關。'; }catch(e){ $('setNote').textContent='這個瀏覽器不支援語音。'; } };
+$('setVoiceTest').onclick=()=>{ audioInit(); pickVoice(); try{ speakNow('大家好，我是應援團長！全場一起加油！',1.05); $('setNote').textContent=(VOICE.v?`使用語音：${VOICE.v.name}`:'正在用系統預設的中文語音。')+(VOICE.hq?'':'　想要更自然的聲音：iPhone「設定 → 輔助使用 → 朗讀內容 → 聲音 → 中文（台灣）」下載「增強」或「高品質」版本，下載後重新打開遊戲。')+'　沒聲音請關閉側邊的靜音開關。'; }catch(e){ $('setNote').textContent='這個瀏覽器不支援語音。'; } };
 $('setVoice').onclick=()=>{ SAVE.settings.voice=!SAVE.settings.voice; if(!SAVE.settings.voice) try{ speechSynthesis.cancel(); }catch(e){} persist(); renderSettings(); };
 $('setAssist').onclick=()=>{ SAVE.settings.assist=!SAVE.settings.assist; persist(); renderSettings(); };
 $('setMusic').oninput=e=>{ SAVE.settings.music=+e.target.value; persist(); };
