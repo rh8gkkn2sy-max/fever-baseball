@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.27（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.28（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.27（2026.10.11）</div>
+    <div class="ver">版本 2.28（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -688,19 +688,36 @@ function speakNow(text,rate){
 }
 // classic CPBL stand calls, picked by the situation and never twice in a row
 function pickChant(list){ MUS.recent=MUS.recent||[]; const fresh=list.filter(s=>!MUS.recent.includes(s)), s=pick(fresh.length?fresh:list); MUS.recent.push(s); if(MUS.recent.length>4) MUS.recent.shift(); return s; }
+// The captain's lines: call-and-response ("我說…你們說…"), Taiwan stadium slang and a little food humour,
+// the way a CPBL captain keeps the stands loud
 const OFF_T={
-  base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！','一直安打，一直打！一直安打，一直打！','{tn}！尚勇！'],
-  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！','炸裂！炸裂！全壘打！','轟吧！一棒轟出牆！'], steal:['盜！盜！盜！衝啊！'], spd:['{n}！跑起來！','閃電出擊！{n}！'],
-  risp:['得分！得分！{n}！','帶他們回家！帶他們回家！','一支安打就好！','打點！打點！{n}！'], loaded:['滿壘！清壘！清壘！','滿貫全壘打！'],
-  two:['顧好！顧好！選好球！','穩住！穩住！看清楚！'], three:['看清楚！保送也好！'], behind:['逆轉！逆轉！{tn}逆轉！','還沒結束！追上去！'], twoOut:['兩出局！不放棄！','最後一口氣！衝啊！']};
+  base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！','一直安打，一直打！一直安打，一直打！','{tn}！尚勇！',
+    '我說{tn}！你們說衝！{tn}！衝！{tn}！衝！','準備好了沒？大聲一點！聽不到！','左邊的！右邊的！一起喊{n}！','一棒！定江山！{n}！','讚啦！{n}！打給他看！','揮大棒！喝珍奶！{n}打出去！','來喔來喔！{n}要開轟囉！'],
+  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！','炸裂！炸裂！全壘打！','轟吧！一棒轟出牆！','外野手往後退！往後退！','這球很大喔！很大喔！','送它去外太空！'],
+  steal:['盜！盜！盜！衝啊！','跑跑跑！他抓不到！'], spd:['{n}！跑起來！','閃電出擊！{n}！','腳程快！別想抓！'],
+  risp:['得分！得分！{n}！','帶他們回家！帶他們回家！','一支安打就好！','打點！打點！{n}！','壘上有人！機會來啦！','回來回來！通通回來！'],
+  loaded:['滿壘！清壘！清壘！','滿貫全壘打！','滿壘大餐！一口吃掉！'],
+  two:['顧好！顧好！選好球！','穩住！穩住！看清楚！','兩好球不要怕！擋下來！'], three:['看清楚！保送也好！','滿球數！決勝負！'],
+  behind:['逆轉！逆轉！{tn}逆轉！','還沒結束！追上去！','落後沒在怕！逆轉給你看！'], twoOut:['兩出局！不放棄！','最後一口氣！衝啊！','兩出局才精彩！']};
 const DEF_T={
-  base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！'],
-  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','麻糬麻糬，三振出局！','三振！三振！','一顆就好！一顆好球！'], one:['再一個好球！','揮棒落空！揮棒落空！'],
-  dp:['雙殺！雙殺！','滾地球！雙殺！','水果滷味，雙殺！雙殺！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
-  twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！'], clean:['三上三下！三上三下！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！']};
-const SHOUT_T={hr:'全壘打！{n}！全壘打！',hit:'安打！{n}！',score:'得分！{tn}得分！',trot:'全壘打！{n}！繞場一周！',come:'逆轉！逆轉！{tn}逆轉！',ahead:'超前！超前！{tn}加油！',
-  closerIn:'守護神登場！{pn}！',lucky:'幸運七局！全場起立！跟著我一起喊！{tn}加油！',luckyGood:'太棒了！全場沸騰！',luckyOk:'很好！繼續大聲喊！',greet:'{tn}應援團，比賽開始！全場一起加油！',
-  k:['三振！三振！三振！','{pn}！三振王！','揮棒落空！回去吃便當！','三振！漂亮！'],field:['雙殺守備！','三壘阻殺！','沒收全壘打！','美技飛撲！','跳接美技！','飛撲攔截！'].map(t=>'好球！'+t)};
+  base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！','{pn}！穩穩投！','投手丘是你的！'],
+  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','麻糬麻糬，三振出局！','三振！三振！','一顆就好！一顆好球！','最後一顆！給他吃K！','三振給我看！三振給我看！'], one:['再一個好球！','揮棒落空！揮棒落空！','快了快了！再一顆！'],
+  dp:['雙殺！雙殺！','滾地球！雙殺！','水果滷味，雙殺！雙殺！','雙殺快餐！外帶一份！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
+  twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！','收工收工！準備回家！'], clean:['三上三下！三上三下！','三上三下！早點下班！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！','關門大吉！']};
+const SHOUT_T={hr:'全壘打！全壘打！{n}！再見啦小白球！',hit:'安打！{n}！漂亮！',score:'得分！{tn}得分！讚啦！',trot:'{n}！繞場一周！享受掌聲！',come:'逆轉！逆轉！{tn}逆轉勝！',ahead:'超前！超前！{tn}來了！',
+  closerIn:'守護神登場！{pn}！',lucky:'幸運七局！全場起立！我喊{tn}，你們喊加油！',luckyGood:'太讚了！全場沸騰！',luckyOk:'不錯喔！再大聲一點！',greet:'{tn}的朋友們！準備好了沒！比賽開始！',
+  k:['三振！三振！三振！','{pn}！三振王！','揮棒落空！回去吃便當！','三振！漂亮！','吃K啦！三振！','{pn}！K！K！K！'],field:['雙殺守備！','三壘阻殺！','沒收全壘打！','美技飛撲！','跳接美技！','飛撲攔截！'].map(t=>'好球！'+t)};
+// the cheer girls' own little lines (G| in the packs): sweet and bubbly, a beat after the captain
+const GIRL_T={cheer:['大家一起加油喔！','大聲一點～我們聽不到喔！','好期待喔！一起喊！'],hit:['好棒喔！','安打～讚讚讚！','漂亮～！'],hr:['全壘打～太帥了啦！','哇～飛出去了耶！'],
+  score:['得分了～耶！','再一分～加油喔！'],k:['三振～好厲害喔！','投得好棒喔！'],lucky:['大家一起跳舞吧！','跟著我們一起動起來～'],come:['逆轉了～好感動喔！'],
+  win:['贏球了～謝謝大家！','耶～我們贏了！'],mvp:['恭喜MVP～好帥喔！'],field:['好球～守得好棒！']};
+function girlSay(kind,delay){
+  if(!AU.on||!AU.ctx||!G||G.attract||(SAVE.settings&&SAVE.settings.voice===false)||SAVE.settings.aiVoice===false) return;
+  const L=GIRL_T[kind]; if(!L) return; const t=pick(L), clip=VP.map['G'+voiceKey(t)]; if(!clip) return;
+  later(delay==null?1300:delay,()=>{ const c=AU.ctx; if(!c) return;
+    const go=buf=>{ clip.buf=buf; const s=c.createBufferSource(), g=c.createGain(); s.buffer=buf; g.gain.value=1.3; s.connect(g).connect(AU.master); s.start(); };
+    if(clip.buf) go(clip.buf); else c.decodeAudioData(clip.ab.slice(clip.off,clip.off+clip.len)).then(go).catch(()=>{}); });
+}
 function fillT(s,v){ return s.replace(/\{(n|pn|tn)\}/g,(m,k)=>v[k]||''); }
 function offenseChant(){
   const b=curBatter(), v={n:b.short||b.name,tn:batTeam().name}, behind=G.score.home<G.score.away, L=OFF_T.base.slice();
@@ -735,6 +752,7 @@ function captainLines(){
   ['全壘打！','安打！','得分！','三振！','加油！','好球！','勝利！'].forEach(t=>add('common',t));
   ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！','勝利！'].forEach(t=>add('common','C|'+t));
   TEAMS.forEach(T=>{ add('t-'+T.id,'C|'+T.name+'！'); add('t-'+T.id,T.name+'！'); });
+  Object.values(GIRL_T).flat().forEach(t=>add('common','G|'+t));
   ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id, n=p.short||p.name; if(p.role) add(k,n+'加油！'); else { add(k,n+'！'); add(k,'C|'+n+'！'); } });
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
@@ -762,7 +780,7 @@ function playClip(e){
   c.decodeAudioData(e.ab.slice(e.off,e.off+e.len)).then(go).catch(()=>{}); return true;
 }
 function leaderShout(text,force,crowdEcho,rate){
-  if(!AU.on||!AU.ctx||!G||G.attract) return;
+  if(!AU.on||!AU.ctx||!G||G.attract||G.practice) return;
   G.shout={txt:text.replace(/[　 ]+/g,' '),t:0};
   if(SAVE.settings&&SAVE.settings.voice===false) return;
   const now=performance.now(); if(!force&&now-MUS.lastShout<2400) return; MUS.lastShout=now;
@@ -2540,19 +2558,19 @@ function pitchKeys(p){
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
 function batPose(o){ const g=o.g, d=o.bd, n=Math.hypot(d[0],d[1],d[2]);
   o.lh=[g[0],g[1],g[2]]; o.rh=[g[0]+d[0]/n*0.09,g[1]+d[1]/n*0.09,g[2]+d[2]/n*0.09]; return P(o); }
-const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.16,1.33,0.2],bd:[-0.36,0.86,-0.34],le:[0.04,1.0,0.36],re:[-0.5,1.24,-0.12],hd:[0,1.25,0.08]};
+const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.27,1.47,0.13],bd:[-0.3,0.88,-0.36],le:[0.12,1.05,0.42],re:[-0.62,1.34,-0.02],hd:[0,1.25,0.08]};
 const STANCE_MOD={
   std:{},
   open:{hr:[0,0.22,0],lf:[0.3,.08,-0.2],hd:[0,1.0,0.08]},
-  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.14,1.2,0.24],bd:[-0.45,0.8,-0.3],le:[0.04,0.9,0.36],re:[-0.48,1.12,-0.12]},
-  high:{g:[-0.17,1.45,0.17],bd:[-0.2,0.95,-0.25],hy:-0.08,le:[0.04,1.1,0.34],re:[-0.5,1.42,-0.1]},
+  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.25,1.36,0.17],bd:[-0.4,0.82,-0.32],le:[0.12,0.96,0.42],re:[-0.6,1.24,-0.02]},
+  high:{g:[-0.25,1.58,0.1],bd:[-0.18,0.95,-0.26],hy:-0.08,le:[0.12,1.15,0.4],re:[-0.6,1.48,-0.02]},
   kick:{hy:-0.1,lf:[0.3,.08,0.02]},
 };
 function batterSet(stance,left){
   const m=STANCE_MOD[stance]||{}, g0=m.g||BASE_STANCE.g;
   const st=batPose(Object.assign({},BASE_STANCE,m));
   const ld=batPose(Object.assign({},BASE_STANCE,m,{hx:-0.05,sp:[(m.sp||BASE_STANCE.sp)[0],-0.15,0],hr:[0,-0.32,0],lf:stance==='kick'?[0.18,0.5,0.12]:[0.28,0.17,0.0],lk:[0.6,0.9,1.0],g:[g0[0]-0.1,g0[1]+0.03,g0[2]-0.04],bd:[-0.45,0.88,-0.15]}));
-  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[-0.17,1.31,0.26],bd:[-0.45,0.88,-0.15]}));
+  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[-0.24,1.41,0.2],bd:[-0.45,0.88,-0.15],re:[-0.58,1.3,0.02]}));
   const sw=[
     [0.000,sd],
     [0.022,batPose({hx:0.06,hy:-0.21,sp:[0.25,0.12,0],hr:[0,0.6,0],lf:[0.6,.08,0.03],rf:[-0.36,0.1,0.02],lk:[0.8,0.5,1.0],rk:[0,0.5,1.0],g:[-0.12,1.12,0.4],bd:[-0.78,0.28,0.56],le:[0.4,0.85,0.75],re:[-0.2,0.78,0.38],hd:[0,1.15,0.1]})],
@@ -2925,7 +2943,7 @@ function resetPositions(){
   const cp=FT_.lineup.find(p=>p.pos==='捕手')||FT_.lineup.find(p=>!POS_SLOT[p.pos])||FT_.lineup[0];
   G.catcher=figFor(cp,FT_,fs,'catcher');
   if(!G.catcher.ghostMats){ const ms=[]; G.catcher.root.traverse(o=>{ if(o.material&&!Array.isArray(o.material)){ o.material=o.material.clone(); ms.push(o.material); } }); G.catcher.ghostMats=ms; } placeFig(G.catcher,0,1.2,Math.PI); G.catcher.mode='crouch'; G.catcher.from=null; G.catcher.home=G.catcher.root.position.clone();
-  placeUmps();
+  placeUmps(); if(G.practice){ G.fielders.slice(1).forEach(f=>f.root.visible=false); if(G.ump2) G.ump2.root.visible=false; }
   placeBatter();
   placeRunners();
 }
@@ -3370,6 +3388,8 @@ function startPlay(EV,L,spray,p0,q){
   if(plan.hl&&(plan.hl.type==='dive'||plan.hl.type==='jump'||plan.hl.type==='rob')) endT+=0.5;
   runners.forEach(rn=>{ let len=0; for(let i=1;i<rn.path.length;i++) len+=rn.path[i].distanceTo(rn.path[i-1]); if(!rn.out) endT=Math.max(endT,Math.min(rn.start+len/rn.speed+0.3,9)); });
   G.phase='play';
+  if(G.practice){ plan.throws=[]; plan.covers=[]; plan.hl=null; runners.length=0; ev=null;
+    const land=tr.wallT!=null&&res==='HR'?tr.wallT+1.2:(tr.firstT!=null?tr.firstT+0.7:2.2); endT=Math.min(endT,Math.max(1.4,Math.min(4.2,land))); }
   G.play={tr,ev,res,r,oc,plan,t:0,endT,runners,ballPos:p0.clone(),p0:p0.clone(),batPos:G.batterFig.root.position.clone(),batYaw:G.batterFig.yaw,q:q==null?.6:q};
   G.camMode='follow'; G.camT=0; G.camLook=p0.clone();
   if(G.batterFig.mode!=='swing') setMode(G.batterFig,'swing',0.02);
@@ -3447,11 +3467,12 @@ function showOutcome(o){
   if(o.runs&&!G.practice) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
   popup(o.text,{sub,color:o.color,size:o.size,dur:1600,y:330});
   if(userBatting()){
+    if(o.res==='HR') girlSay('hr',2600); else if(o.hit) girlSay(o.runs?'score':'hit',1800);
     if(o.res==='HR'){ G.fwT=3; sfx('roar'); setMarquee(`全壘打！全壘打！　${curBatter().name}！　${G.home.call}`); leaderShout(fillT(SHOUT_T.hr,{n:curBatter().short}),true); }
     else if(o.hit){ sfx('cheer'); leaderShout(o.runs?fillT(SHOUT_T.score,{tn:G.home.name}):fillT(SHOUT_T.hit,{n:curBatter().short}),true); }
     if(o.hit||o.res==='BB'||o.runs) setMood('jump',2400);
   }else{
-    if(o.res==='K'){ setMood('jump',1600); sfx('cheer'); }
+    if(o.res==='K'){ setMood('jump',1600); sfx('cheer'); girlSay('k',1900); }
     else if(!o.hit&&o.res!=='BB'){ setMood('jump',1200); sfx('cheer'); }
   }
 }
@@ -3471,7 +3492,7 @@ function commitOutcome(o){
     if(o.runs) G.board={a:'得分',b:`+${o.runs}`,c:G.home.hud};
     // taking the lead late: the comeback number, the whole stand on its feet
     const d1=G.score.home-G.score.away;
-    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; later(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(fillT(d0<0?SHOUT_T.come:SHOUT_T.ahead,{tn:G.home.name}),true); }); }
+    if(d0<=0&&d1>0&&G.inning>=7){ G.comebackT=G.clock; const w=d0<0?'逆轉！':'超前！'; later(400,()=>{ popup(w,{color:'#FF3D7F',size:72,dur:2200,y:220}); setMarquee(`${w}　${G.home.name}${w}　${G.home.call}`); leaderShout(fillT(d0<0?SHOUT_T.come:SHOUT_T.ahead,{tn:G.home.name}),true); girlSay('come',2400); }); }
   }else{
     if(o.res==='K'){ G.ks++; addGauge(20); missionEvent('k'); }
     if(o.res==='DP') missionEvent('dp');
@@ -3490,6 +3511,7 @@ function finishPA(o){
       startCut('react',1200,{f:pf,pose:'pump'},()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); }); leaderShout(fillT(pick(SHOUT_T.k),{pn:(curPitcher().short||pn)}),true); }));
     return;
   }
+  if(G.practice){ after(o.res==='K'?900:700,nextPA); return; }
   if(o.res==='K'&&userBatting()){ sfx('ooh'); const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
     const ump=fn=>{ const lk=G.kLook; G.kLook=false; return lk?startCut('ump',1150,{},fn):fn(); };
     after(500,()=>ump(()=>startCut('react',1300,{f:G.batterFig,pose:mad?'helmet':'slump'},()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA)))); return; }
@@ -3516,6 +3538,7 @@ function impact(p0,q,res,user){
 }
 function afterPlay(o){
   const user=userBatting();
+  if(G.practice){ G.camMode='bat'; resetPositions(); if(o.res==='HR') confetti(80); return after(600,nextPA); }
   if(user&&(o.runs||o.res==='HR'||o.hit)){
     startCut('celebrate',(o.res==='HR'?3000:2000)*(FAST()?.5:1),{side:'home',big:o.res==='HR'||o.runs>0},()=>{ G.camMode='bat'; resetPositions(); nextPA(); });
     confetti(o.res==='HR'?320:160);
@@ -3562,7 +3585,7 @@ function gameOver(walkoff){
   if(win){ setMood('jump',99999); G.fwT=5; sfx('roar'); confetti(360); popup(walkoff?'再見安打！':'比賽勝利！',{color:G.home.hud,size:66,dur:2600}); setMarquee(`${G.home.city}${G.home.name}　勝利！　${G.home.call}`); }
   else popup(h===a?'和局':'比賽結束',{color:'#fff',size:60,dur:2600});
   const hits=G.home.lineup.reduce((s,p)=>s+p.h,0);
-  if(win) missionEvent('win');
+  if(win){ missionEvent('win'); girlSay('win',1200); }
   SAVE.streak=win?(SAVE.streak||0)+1:0; G.streakBonus=win?Math.min(SAVE.streak-1,5)*40:0;
   G.coinsEarned=(win?300:h===a?180:120)+hits*10+G.hrs*30+G.ks*8+G.streakBonus;
   SAVE.coins+=G.coinsEarned; SAVE.games++; if(win) SAVE.wins++; persist();
@@ -3618,7 +3641,7 @@ function startCeremony(){
   G.cer={side,T,mvp:M.p,line:M.line,fig,dome,bpm,moves,res:[],heat:dome?30:20,fb:null,beat:0,shown:{}};
   popup(dome?'巨蛋賽後演唱會':'賽後頒獎',{sub:`單場 MVP　#${M.p.num} ${M.p.name}`,color:T.hud,size:48,dur:2600,y:250});
   setMarquee(`單場 MVP　${M.p.name}　${M.line}　·　${T.squad.n} 和 MVP 一起跳！`);
-  sfx('roar'); G.fwT=2.5; fwBurst(S3.fw);
+  sfx('roar'); G.fwT=2.5; fwBurst(S3.fw); girlSay('mvp',1500);
   startCut('mvp',600000,{side},endCeremony); G.cut.skip=false;
 }
 function cerPhase(b){ return b<CER_B.award?'award':b<CER_B.intro?'intro':b<CER_B.end-8?'dance':'final'; }
@@ -4306,6 +4329,8 @@ function squadRoutine(side){
   if(G.cut&&G.cut.type==='kdance'&&G.cut.data.side===side) return {routine:K_SEQ};
   if(G.cer&&side===G.cer.side) return {routine:cerRoutine()};
   if(G.attract) return {routine:withSig(MOVE_POOL[T.squad.style],3)};
+  // batting practice: the girls hang out by the cage, clapping and waving, nothing choreographed
+  if(G.practice) return {routine:['CLAPUP','WAVE','LEAN_R','CLAPUP','HIP','WAVE_B','LEAN_L','CLAPUP']};
   const R=TEAM_ROUTINES[T.id]||TEAM_ROUTINES.TB, blk=Math.floor(G.beatPos/16);
   if(side==='home'&&G.comebackT&&G.clock-G.comebackT<14000) return {routine:R.come};
   if(batSide()===side) return {routine:G.chance?withSig(CHANCE_SEQ,5):blk%3===2?R.a:withSig(curBatter().dance,5)};
@@ -5214,7 +5239,7 @@ function startLucky(){
   G.phase='lucky'; G.t=0; G.waveT=G.clock;
   setMarquee(`幸運七局！　全場起立　${T.call}`); setMood('skill',99999);
   sfx('horn');
-  leaderShout(fillT(SHOUT_T.lucky,{tn:T.name}),true);
+  leaderShout(fillT(SHOUT_T.lucky,{tn:T.name}),true); girlSay('lucky',3200);
 }
 function judge(n,dt,x,y){
   const w=G.lk.win, a=Math.abs(dt);
@@ -6014,6 +6039,7 @@ function musicMode(){
   const H=G.home, A=G.away;
   if(G.attract) return {key:'title'+H.id,song:songFor('anthem',null,H),vol:.45};
   if(G.cer) return {key:'cer'+G.cer.T.id,song:songFor('anthem',null,G.cer.T),vol:1};
+  if(G.practice) return {key:'prac'+H.id,song:songFor('anthem',null,H),vol:.32};
   if(G.over) return G.score.home>G.score.away?{key:'win',song:songFor('win',null,H),vol:1}:null;
   if(G.phase==='trot') return {key:'trot'+batTeam().id,song:songFor('win',null,batTeam()),vol:1};
   if(G.show&&G.show.big) return {key:'closer'+G.show.T.id,song:songFor('closer',null,G.show.T),vol:1};
@@ -6109,7 +6135,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011021717', box=document.getElementById('upd');
+  const BUILD='20261011023433', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
