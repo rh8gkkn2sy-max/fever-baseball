@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.18（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.19（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.18（2026.10.10）</div>
+    <div class="ver">版本 2.19（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1872,18 +1872,38 @@ function drawEmblem(g,x,y,r,T){
 /* =========================================================
    Characters: procedural rigs, outfits and two-bone IK
    ========================================================= */
+// shaped limbs instead of plain tubes: a lathe profile [[t (0 top..1 bottom), radius]] over the bone length,
+// centred like a cylinder so it drops into the old slots
+function limbGeo(len,prof,seg){ const pts=[new THREE.Vector2(0.001,len/2+0.004)]; prof.forEach(([t,r])=>pts.push(new THREE.Vector2(r,len/2-t*len))); pts.push(new THREE.Vector2(0.001,-len/2-0.004)); const g=new THREE.LatheGeometry(pts,seg||12); g.computeVertexNormals(); return g; }
+// glue simple parts into one geometry (one draw call per hand or shoe)
+function mergeParts(parts){ const pos=[],nor=[]; parts.forEach(([g,m])=>{ const q=g.index?g.toNonIndexed():g.clone(); q.applyMatrix4(m); const p=q.attributes.position.array, n=q.attributes.normal.array; for(let i=0;i<p.length;i++){ pos.push(p[i]); nor.push(n[i]); } });
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); return g; }
+const _M=(x,y,z,rx,sx,sy,sz)=>new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx||0,0,0)),new THREE.Vector3(sx||1,sy||1,sz||1));
+// a hand hanging from the wrist (local -y): palm, four slightly curled fingers, a thumb forward
+function handGeo(k){ const P=[], sph=new THREE.SphereGeometry(1,10,8), cyl=new THREE.CylinderGeometry(1,0.85,1,7), tip=new THREE.SphereGeometry(1,6,5);
+  P.push([sph,_M(0,-0.048*k,0.004*k,0,0.04*k,0.05*k,0.021*k)]);
+  [-0.025,-0.0085,0.0085,0.025].forEach((x,i)=>{ const L=(i===0||i===3?0.052:0.062)*k, y=-0.092*k-L/2; P.push([cyl,_M(x*k,y,0.011*k,0.32,0.0088*k,L,0.0088*k)]); P.push([tip,_M(x*k,y-L/2*0.95,0.011*k+L*0.16,0,0.0088*k,0.0088*k,0.0088*k)]); });
+  P.push([cyl,_M(0.004*k,-0.058*k,0.034*k,-0.75,0.0105*k,0.05*k,0.0105*k)]); P.push([tip,_M(0.004*k,-0.074*k,0.052*k,0,0.0105*k,0.0105*k,0.0105*k)]);
+  return mergeParts(P); }
+// a shoe from the ankle forward (+z): sole, rounded upper, toe box, heel counter
+function shoeGeo(k){ const P=[], box=new THREE.BoxGeometry(1,1,1), sph=new THREE.SphereGeometry(1,12,8);
+  P.push([box,_M(0,-0.07*k,0.05*k,0,0.095*k,0.022*k,0.27*k)]);
+  P.push([sph,_M(0,-0.045*k,0.045*k,0,0.05*k,0.04*k,0.13*k)]);
+  P.push([sph,_M(0,-0.052*k,0.15*k,0,0.047*k,0.032*k,0.055*k)]);
+  P.push([sph,_M(0,-0.04*k,-0.055*k,0,0.046*k,0.04*k,0.04*k)]);
+  return mergeParts(P); }
 const GEO={
   pelvis:new THREE.CylinderGeometry(0.15,0.15,0.2,14),
   neck:new THREE.CylinderGeometry(0.05,0.056,0.12,10),
   head:new THREE.SphereGeometry(0.115,22,16),
   ear:new THREE.SphereGeometry(0.024,8,6),
   nose:new THREE.SphereGeometry(0.016,8,6),
-  upper:new THREE.CylinderGeometry(0.056,0.046,0.32,12),
-  fore:new THREE.CylinderGeometry(0.045,0.035,0.265,12),
-  hand:new THREE.SphereGeometry(0.047,10,8),
-  thigh:new THREE.CylinderGeometry(0.082,0.062,0.44,12),
-  shin:new THREE.CylinderGeometry(0.06,0.045,0.44,12),
-  foot:new THREE.BoxGeometry(0.1,0.07,0.26),
+  upper:limbGeo(0.32,[[0,.056],[.12,.063],[.4,.059],[.75,.05],[1,.044]]),
+  fore:limbGeo(0.265,[[0,.046],[.18,.051],[.45,.044],[.85,.034],[1,.032]]),
+  hand:handGeo(1),
+  thigh:limbGeo(0.44,[[0,.084],[.25,.087],[.6,.075],[.9,.063],[1,.059]],14),
+  shin:limbGeo(0.44,[[0,.058],[.2,.065],[.42,.06],[.78,.046],[1,.043]],14),
+  foot:shoeGeo(1),
   cap:new THREE.SphereGeometry(0.127,22,10,0,Math.PI*2,0,Math.PI/2),
   brim:new THREE.CylinderGeometry(0.1,0.1,0.014,18,1,false,-Math.PI/2,Math.PI),
   flap:new THREE.SphereGeometry(0.06,12,8,0,Math.PI,0,Math.PI),
@@ -1902,14 +1922,14 @@ const GEO={
   belt:new THREE.CylinderGeometry(0.153,0.153,0.045,14),
   // cheer squad
   cFace:new THREE.SphereGeometry(0.1,24,18),
-  cUpper:new THREE.CylinderGeometry(0.041,0.033,0.29,12),
-  cFore:new THREE.CylinderGeometry(0.032,0.026,0.245,12),
-  cHand:new THREE.SphereGeometry(0.034,10,8),
-  cThigh:new THREE.CylinderGeometry(0.072,0.047,0.45,16),
-  cShin:new THREE.CylinderGeometry(0.047,0.032,0.43,16),
+  cUpper:limbGeo(0.29,[[0,.041],[.15,.043],[.5,.038],[.85,.032],[1,.031]]),
+  cFore:limbGeo(0.245,[[0,.033],[.2,.035],[.6,.029],[1,.024]]),
+  cHand:handGeo(0.8),
+  cThigh:limbGeo(0.45,[[0,.074],[.3,.073],[.7,.058],[1,.047]],16),
+  cShin:limbGeo(0.43,[[0,.047],[.22,.053],[.5,.045],[.85,.034],[1,.032]],16),
   bootL:new THREE.CylinderGeometry(0.053,0.04,0.335,14),
   bootS:new THREE.CylinderGeometry(0.046,0.04,0.13,14),
-  cFoot:new THREE.BoxGeometry(0.075,0.06,0.2),
+  cFoot:shoeGeo(0.78),
   sneaker:new THREE.BoxGeometry(0.095,0.08,0.24),
   hairCap:new THREE.SphereGeometry(0.11,24,16,0,Math.PI*2,0,Math.PI*0.58),
   hairBall:new THREE.SphereGeometry(0.1,18,14),
@@ -2043,17 +2063,17 @@ function makePlayer(p,T,kitSide,opt){
   const sleeve=M(kit.sleeve), jer=M(kit.base);
   ['l','r'].forEach(s=>{
     const ua=mesh(GEO.upper,jer,f[s+'Sh'],0,-0.16,0,sh); ua.scale.set(w,1,w);
-    mesh(GEO.jointS,jer,f[s+'Sh'],0,0,0,sh).scale.setScalar(1.22*w);
+    mesh(GEO.jointS,jer,f[s+'Sh'],0,0,0,sh).scale.setScalar(1.14*w);
     mesh(GEO.cuff,sleeve,f[s+'Sh'],0,-0.2,0,false).rotation.x=Math.PI/2;
     const armC=(s==='l'?lk.sleeveL:lk.sleeveR);
     mesh(GEO.fore,armC?M(armC):skin,f[s+'El'],0,-0.1325,0,sh).scale.set(.85+w*.15,1,.85+w*.15);
-    mesh(GEO.jointS,armC?M(armC):skin,f[s+'El'],0,0,0,sh).scale.setScalar(.98*(.85+w*.15));
+    mesh(GEO.jointS,armC?M(armC):skin,f[s+'El'],0,0,0,sh).scale.setScalar(.9*(.85+w*.15));
     mesh(GEO.hand,(opt.helmet&&lk.gloves)?M(lk.gloves):(opt.helmet?M('#F2F2F2'):skin),f[s+'Hand'],0,0,0,sh);
     const th=mesh(GEO.thigh,M(kit.pants),f[s+'Hip'],0,-0.22,0,sh); th.scale.set(w,1,w);
     const socks=lk.highSocks?M(kit.sleeve):M(kit.pants);
     mesh(GEO.shin,socks,f[s+'Knee'],0,-0.22,0,sh).scale.set(.8+w*.2,1,.8+w*.2);
-    mesh(GEO.jointS,M(kit.pants),f[s+'Knee'],0,0,0,sh).scale.setScalar(1.33*(.8+w*.2));
-    mesh(GEO.foot,M('#16161c'),f[s+'Ank'],0,-0.04,0.05,sh);
+    mesh(GEO.jointS,M(kit.pants),f[s+'Knee'],0,0,0,sh).scale.setScalar(1.2*(.8+w*.2));
+    mesh(GEO.foot,M('#16161c'),f[s+'Ank'],0,0.02,0,sh);
   });
   if(opt.glove!==false&&!opt.helmet){ const gh=f.throwsL?f.rHand:f.lHand; const gl=mesh(GEO.glove,M('#5A3418',{roughness:.55}),gh,0,-0.05,0.02,sh); gl.scale.set(1,1.15,.55); f.glove=gl; f.gloveHand=gh; }
   return f;
@@ -2158,10 +2178,10 @@ function makeCheer(T,mem,lead){
     const pom=makePompom(Q.pom,Q.pom2,Q.glow); pom.position.y=-0.04; f[s+'Hand'].add(pom); f[s+'Pom']=pom;
     mesh(GEO.cThigh,skin,f[s+'Hip'],0,-0.225,0,false);
     mesh(GEO.cShin,skin,f[s+'Knee'],0,-0.215,0,false);
-    mesh(GEO.jointS,skin,f[s+'Knee'],0,0,0,false).scale.setScalar(1.02);
+    mesh(GEO.jointS,skin,f[s+'Knee'],0,0,0,false).scale.setScalar(0.98);
     if(Q.bootH==='long') mesh(GEO.bootL,M(Q.boots,{roughness:.35}),f[s+'Knee'],0,-0.262,0,false);
     if(Q.bootH==='short') mesh(GEO.bootS,M(Q.boots,{roughness:.35}),f[s+'Knee'],0,-0.37,0,false);
-    mesh(Q.bootH==='sneaker'?GEO.sneaker:GEO.cFoot,M(Q.boots,{roughness:.4}),f[s+'Ank'],0,-0.035,0.04,false);
+    mesh(Q.bootH==='sneaker'?GEO.sneaker:GEO.cFoot,M(Q.boots,{roughness:.4}),f[s+'Ank'],0,Q.bootH==='sneaker'?-0.035:0.015,Q.bootH==='sneaker'?0.04:0,false);
   });
   return f;
 }
@@ -3367,11 +3387,13 @@ function cerPhase(b){ return b<CER_B.award?'award':b<CER_B.intro?'intro':b<CER_B
 function cerRound(b){ const k=b-CER_B.intro; return {r:Math.floor(k/8),local:k-Math.floor(k/8)*8}; }
 function cerInput(g){
   const C=G.cer; if(!C||cerPhase(C.beat)!=='dance') return;
-  const {r,local}=cerRound(C.beat); if(r<0||r>=CER_ROUNDS||C.res[r]||local<2.8||local>=7.9) return;
+  const {r,local}=cerRound(C.beat); C.pressed={g,t:C.beat};
+  if(r<0||r>=CER_ROUNDS||C.res[r]||local>=7.9) return;
+  if(local<2.8){ C.fb={txt:'太早了！等她們跳完',c:'#9FA8D6',t:0}; return; }
   const mv=C.moves[r], ok=g===mv.g;
   const grade=!ok?'WRONG':local>=3.5&&local<=5.3?'PERFECT':'GOOD';
   C.res[r]={g,grade,at:C.beat}; C.heat=clamp(C.heat+{PERFECT:14,GOOD:8,WRONG:-3}[grade],0,100);
-  C.fb={txt:{PERFECT:'PERFECT！',GOOD:'GOOD！',WRONG:'跳錯了！'}[grade],c:{PERFECT:'#FFD54A',GOOD:'#7CFF8A',WRONG:'#FF8A8A'}[grade],t:0};
+  C.fb={txt:{PERFECT:'PERFECT！',GOOD:local<3.5?'GOOD！稍早':'GOOD！稍晚',WRONG:'按錯了！'}[grade],c:{PERFECT:'#FFD54A',GOOD:'#7CFF8A',WRONG:'#FF8A8A'}[grade],t:0};
   if(grade==='PERFECT'){ sfx('cheer'); haptic(18); } else if(grade==='GOOD') sfx('cheer'); else sfx('ooh');
 }
 function updateCeremony(dt){
@@ -3379,7 +3401,7 @@ function updateCeremony(dt){
   C.beat=Math.max(0,(c.t/1000-0.06)*C.bpm/60); const b=C.beat, ph=cerPhase(b);
   if(C.fb) C.fb.t+=dt;
   if(ph!=='award'&&S3.cerTrophy.visible){ S3.cerTrophy.visible=false; }
-  if(ph==='intro'&&!C.shown.intro){ C.shown.intro=true; popup('跟著啦啦隊跳！',{sub:'她們先跳一小節，換你時滑動或點一下',color:C.T.hud,size:40,dur:2200,y:250}); }
+  if(ph==='intro'&&!C.shown.intro){ C.shown.intro=true; popup('跟著啦啦隊跳！',{sub:'她們先跳，圓點跑到綠色區域時，按下方發亮的鍵',color:C.T.hud,size:40,dur:2200,y:250}); }
   if(ph==='dance'){ const {r,local}=cerRound(b);
     if(local>=7.9&&!C.res[r]){ C.res[r]={g:null,grade:'MISS',at:b}; C.heat=clamp(C.heat-4,0,100); C.fb={txt:'MISS',c:'#9FA8D6',t:0}; }
     if(local<0.1&&!C.shown['r'+r]){ C.shown['r'+r]=true; if(C.dome||r>=3) fwBurst(S3.fw); } }
@@ -3433,6 +3455,10 @@ function endCeremony(){
 }
 function skipCeremony(){ if(G.cer&&G.cut&&G.cut.type==='mvp'){ G.cer.skipped=true; G.cut.t=G.cut.dur; } }
 function cerSkipRect(){ return {x:W-124,y:FT+10,w:110,h:40}; }
+// five big buttons along the bottom of the field view: the thumbs stay off the stage
+const CER_PAD=['L','U','T','D','R'];
+function cerBtns(){ return CER_PAD.map((g,i)=>({g,x:W/2+(i-2)*98,y:FB-64,r:38})); }
+function cerBtnAt(p){ return cerBtns().find(b=>Math.hypot(p.x-b.x,p.y-b.y)<=b.r+10); }
 /* =========================================================
    Per-frame update
    ========================================================= */
@@ -3472,7 +3498,7 @@ function update(dt){
       case 'gauge': if(G.ring){ const R=G.ring, u=G.t/R.dur; R.r=R.r0*(1-u); if(R.wob){ R.ox=Math.sin(G.t/90)*R.wob*6; R.oy=Math.cos(G.t/120)*R.wob*6; } if(u>=1){ R.r=0; stopGauge(); } } break;
       case 'lucky': updateLucky(dt); break;
       case 'play': updatePlay(dt); break;
-      case 'replay': { const h=G.play&&G.play.plan.hl; updatePlay(dt*(h&&h.type==='hr'?0.5:G.play.slowNow||(h&&h.type==='close'&&Math.abs(G.play.t-h.key)<0.55)?0.3:0.55)); } break;
+      case 'replay': { const h=G.play&&G.play.plan.hl; updatePlay(dt*(h&&h.type==='hr'?(G.play.pass<3?0.45:0.85):G.play.slowNow||(h&&h.type==='close'&&Math.abs(G.play.t-h.key)<0.55)?0.3:0.55)); } break;
       case 'trot': updateTrot(dt); break;
     }
   }
@@ -3535,7 +3561,18 @@ function handPos(f,throwing){ const v=new V3(); (throwing?(f.p.throws==='L'?f.lH
 function updatePlay(dt){
   const pl=G.play; pl.t+=dt/1000*1.15;
   if(pl.replay&&pl.t<0){ pl.ballPos.copy(pl.p0).add(new V3(0,0.06*pl.t,pl.t*34)); if(pl.t>-0.05&&G.batterFig.mode!=='swing'){ setMode(G.batterFig,'swing',0); G.batterFig.mt=0; } return; }
+  if(pl.replay&&pl.pass!=null&&pl.pass<3&&pl.t>0.3){
+    // rewind to just before contact for the next angle
+    pl.pass++; pl.t=-0.32; G.camT=0; const bf=G.batterFig; bf.root.position.copy(pl.batPos); setMode(bf,'load',0); bf.mt=0.55; bf.noSpring=true;
+    G.batDrop={t:0}; if(S3.bat.parent!==bf.root) bf.root.add(S3.bat); G.batFlip=null; G.trailInit=false;
+  }
   const t=pl.t, ev=pl.ev, F=G.fielders, th=pl.plan.throws;
+  // the flight trail on the last pass of a home-run replay
+  if(!S3.hrTrail){ const N=240, g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(N*3),3)); g.setDrawRange(0,0);
+    S3.hrTrail=new THREE.Points(g,new THREE.PointsMaterial({color:0xffd54a,size:0.9,map:glowTexture(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false})); S3.hrTrail.frustumCulled=false; scene.add(S3.hrTrail); }
+  { const on=pl.replay&&pl.pass===3&&t>0; S3.hrTrail.visible=on;
+    if(on){ const pts=pl.tr.pts, n=Math.min(pts.length,Math.floor(t/pl.tr.dt)+1), N=240, step=Math.max(1,Math.ceil(n/N)), a=S3.hrTrail.geometry.attributes.position; let k=0;
+      for(let i=0;i<n&&k<N;i+=step,k++) a.setXYZ(k,pts[i].x,pts[i].y,pts[i].z); a.needsUpdate=true; S3.hrTrail.geometry.setDrawRange(0,k); } }
   // replays of a long hit mark where the ball is coming down
   if(!S3.landMk){ S3.landMk=new THREE.Mesh(new THREE.RingGeometry(0.9,1.25,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffd54a,transparent:true,opacity:.8,depthWrite:false,toneMapped:false})); scene.add(S3.landMk); }
   const mk=pl.replay&&pl.plan.hl&&pl.plan.hl.type==='xbh'&&pl.tr.landing&&t>0&&t<pl.tr.firstT+0.6;
@@ -3583,7 +3620,7 @@ function updatePlay(dt){
     if(f.mode!=='run'&&f.mode!=='slide') setMode(f,'run',0.12);
   });
   if(t>=pl.endT){
-    G.play=null; G.phase='idle'; if(S3.landMk) S3.landMk.visible=false;
+    G.play=null; G.phase='idle'; if(S3.landMk) S3.landMk.visible=false; if(S3.hrTrail) S3.hrTrail.visible=false;
     if(pl.replay){ G.camMode='bat'; const fn=G.replayEnd; G.replayEnd=null; fn&&fn(); return; }
     if(!pl.resultShown) showOutcome(pl.oc);
     commitOutcome(pl.oc);
@@ -3602,7 +3639,7 @@ function startReplay(pl,done){
   G.batDrop={t:0}; G.batFlip=pl.res==='HR'?{t:0}:null;
   // trim to the moment that matters
   const hl=pl.plan.hl||{}, ev=pl.ev, lastT=pl.plan.throws.length?pl.plan.throws[pl.plan.throws.length-1]:null;
-  if(hl.type==='hr'){ rp.endT=1.15; }
+  if(hl.type==='hr'){ rp.endT=pl.tr.wallT+1.2; rp.pass=0; }
   else if((hl.type==='dive'||hl.type==='jump'||hl.type==='rob')&&ev){ rp.t=Math.max(-0.32,ev.t-1.2); rp.endT=ev.t+0.9; }
   else if(hl.type==='dp'&&lastT){ rp.t=Math.max(-0.32,ev.t-0.55); rp.endT=lastT.at+lastT.dur+0.3; }
   else if(hl.type==='throwout'&&lastT){ rp.t=Math.max(-0.32,lastT.at+lastT.dur-1.05); rp.endT=lastT.at+lastT.dur+0.3; }
@@ -4105,7 +4142,15 @@ function updateCamera2(dt){
   else if(m==='replay'&&G.play){
     const pl=G.play, hl=pl.plan.hl||{}, k=1-Math.exp(-dt/220);
     let pos, look;
-    if((hl.type==='dive'||hl.type==='jump'||hl.type==='rob')&&pl.ev){
+    if(hl.type==='hr'&&pl.pass!=null){
+      const bp=pl.batPos, side=G.batterFig.p.bat==='L'?-1:1;
+      if(pl.pass<3){ const ang=[[-3.6,1.25,-0.6],[0.2,1.35,-5.2],[3.6,1.25,-0.6]][pl.pass];
+        pos=new V3(bp.x+ang[0],ang[1],bp.z+ang[2]); look=new V3(bp.x+side*0.15,1.05,bp.z-0.3); cam.position.copy(pos); G.camLook.copy(look); cam.lookAt(G.camLook); return; }
+      // behind and above the ball, looking where it is going
+      const b=pl.ballPos, nx=trajAt(pl.tr,Math.min(pl.tr.wallT,pl.t+0.25)), dir=nx.clone().sub(b); if(dir.lengthSq()<1e-6) dir.set(0,0,-1); dir.normalize();
+      const flat=new V3(dir.x,0,dir.z).normalize(); pos=b.clone().addScaledVector(flat,-9).add(new V3(0,3.5,0)); look=b.clone().addScaledVector(flat,6).add(new V3(0,-2.5,0));
+      if(pl.t<0.35){ cam.position.copy(pos); G.camLook.copy(look); }
+    }else if((hl.type==='dive'||hl.type==='jump'||hl.type==='rob')&&pl.ev){
       const f=G.fielders[pl.ev.k], fp=f.root.position, side=new V3(Math.cos(f.yaw),0,-Math.sin(f.yaw));
       pos=fp.clone().addScaledVector(side,5.2).add(new V3(0,1.5,0)); look=fp.clone().add(new V3(0,1.0,0));
       if(pl.t<pl.ev.t-1.4){ pos=new V3(pl.ballPos.x*0.4,Math.max(4,pl.ballPos.y*0.5+4),12+pl.ballPos.z*0.4); look=pl.ballPos.clone(); }
@@ -4714,20 +4759,28 @@ function drawCeremony(){
   const mx=40, my=FT+64, mw=W-80, mh=14; ctx.fillStyle='rgba(7,8,26,.65)'; rr(mx,my,mw,mh,7); ctx.fill();
   const hg=ctx.createLinearGradient(mx,0,mx+mw,0); hg.addColorStop(0,'#5AC8FF'); hg.addColorStop(.6,T.hud); hg.addColorStop(1,'#FF3D7F'); ctx.fillStyle=hg; rr(mx,my,mw*C.heat/100,mh,7); ctx.fill();
   txt(`現場熱度 ${Math.round(C.heat)}`,mx,my-14,15,'#fff',{a:'left',w:700,stroke:3,sc:'#07081A'});
-  if(ph==='intro'){ const n=CER_MOVES.length, gw=(W-60)/n;
+  if(ph==='intro'&&false){ const n=CER_MOVES.length, gw=(W-60)/n;
     CER_MOVES.forEach((m,i)=>{ const x=30+gw*i+gw/2, y=FB-150; ctx.fillStyle='rgba(7,8,26,.7)'; ctx.beginPath(); ctx.arc(x,y,30,0,Math.PI*2); ctx.fill(); txt(m.ic,x,y+2,28,'#fff'); txt(m.n,x,y+48,14,'#E8EAFF',{w:700,stroke:3,sc:'#07081A'}); }); return; }
-  if(ph==='dance'){ const {r,local}=cerRound(b), mv=C.moves[r], mine=local>=4, res=C.res[r];
-    const y=FT+180, rad=56;
-    ctx.fillStyle=mine?'rgba(255,61,127,.82)':'rgba(7,8,26,.75)'; ctx.beginPath(); ctx.arc(cx,y,rad,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=T.hud; ctx.lineWidth=4; ctx.stroke();
-    txt(mv.ic,cx,y+4,58,'#fff',{stroke:4,sc:'#07081A'});
-    txt(mine?(res?'':'換你！'):`看清楚：${mv.n}`,cx,y+rad+30,mine?30:22,mine?'#FFD54A':'#fff',{stroke:5,sc:'#07081A'});
-    // count-in on the demo bar (3, 2, 1) and a ring closing onto "換你！"
-    if(!res&&local>=1&&local<4){ const k=3-Math.floor(local-1), u=(local-1)%1; ctx.globalAlpha=1-u*0.6; txt(String(k),cx+rad+44,y,46-u*10,'#FFD54A',{stroke:6,sc:'#07081A'}); ctx.globalAlpha=1; }
-    if(!res&&local>=1&&local<5.3){ const u=clamp((4-local)/3,0,1), rr2=rad+6+u*80; ctx.globalAlpha=local>=4?0.9:0.35+0.65*(1-u); ctx.strokeStyle=local>=3.5?'#7CFF8A':'#fff'; ctx.lineWidth=local>=3.5?7:4; ctx.beginPath(); ctx.arc(cx,y,rr2,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
-    txt(`${r+1} / ${CER_ROUNDS}`,cx,FT+108,16,'#C9CCF0',{w:700,stroke:3,sc:'#07081A'});
+  if(ph==='dance'||ph==='intro'){ const {r,local}=ph==='dance'?cerRound(b):{r:0,local:-1}, mv=ph==='dance'?C.moves[r]:null, res=ph==='dance'?C.res[r]:null, mine=local>=3.5;
+    // the move to copy, big, up top
+    if(mv){ const y=FT+170, rad=48; ctx.fillStyle=mine&&!res?'rgba(255,61,127,.85)':'rgba(7,8,26,.75)'; ctx.beginPath(); ctx.arc(cx,y,rad,0,Math.PI*2); ctx.fill(); ctx.strokeStyle=T.hud; ctx.lineWidth=4; ctx.stroke();
+      txt(mv.ic,cx,y+4,50,'#fff',{stroke:4,sc:'#07081A'}); txt(res?'':mine?'換你！按發亮的鍵':'看清楚：'+mv.n,cx,y+rad+26,mine?24:20,mine?'#FFD54A':'#fff',{stroke:5,sc:'#07081A'});
+      txt(`${r+1} / ${CER_ROUNDS}`,cx,FT+104,16,'#C9CCF0',{w:700,stroke:3,sc:'#07081A'}); }
+    // the timeline: a dot runs across the bar; press when it is inside the green zone
+    const tx0=44, tx1=W-44, ty=FB-150, X=k=>tx0+(tx1-tx0)*k/8;
+    ctx.fillStyle='rgba(7,8,26,.72)'; rr(tx0-10,ty-16,tx1-tx0+20,32,16); ctx.fill();
+    ctx.fillStyle='rgba(124,255,138,'+(mine&&!res?.55+.35*Math.sin(G.clock/90):.35)+')'; rr(X(3.5),ty-12,X(5.3)-X(3.5),24,10); ctx.fill();
+    for(let k=0;k<=8;k++){ ctx.fillStyle=k===4?'#7CFF8A':'rgba(255,255,255,.45)'; ctx.fillRect(X(k)-1,ty-(k%4?6:11),2,k%4?12:22); }
+    txt('看',X(1.5),ty-26,14,'#C9CCF0',{w:700,stroke:3,sc:'#07081A'}); txt('按！',X(4.4),ty-26,15,'#7CFF8A',{w:900,stroke:3,sc:'#07081A'});
+    if(ph==='dance'){ const dx=X(clamp(local,0,8)); ctx.fillStyle=res?(res.grade==='PERFECT'?'#FFD54A':res.grade==='GOOD'?'#7CFF8A':'#FF8A8A'):'#fff'; ctx.beginPath(); ctx.arc(dx,ty,11,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#07081A'; ctx.lineWidth=3; ctx.stroke(); }
+    // the buttons: the one to press glows, the one you pressed flashes
+    cerBtns().forEach(bt=>{ const m=CER_MOVES.find(q=>q.g===bt.g), tgt=mv&&mv.g===bt.g&&!res, hit=C.pressed&&C.pressed.g===bt.g&&b-C.pressed.t<0.5;
+      ctx.save(); if(tgt){ ctx.shadowColor=T.hud; ctx.shadowBlur=mine?26:12; }
+      ctx.fillStyle=hit?'#FFFFFF':tgt?(mine?T.hud:'rgba(255,255,255,.22)'):'rgba(7,8,26,.72)'; ctx.beginPath(); ctx.arc(bt.x,bt.y,bt.r,0,Math.PI*2); ctx.fill();
+      ctx.restore(); ctx.strokeStyle=tgt?T.hud:'rgba(255,255,255,.45)'; ctx.lineWidth=tgt?4:2; ctx.beginPath(); ctx.arc(bt.x,bt.y,bt.r,0,Math.PI*2); ctx.stroke();
+      txt(m.ic,bt.x,bt.y+2,30,hit||(tgt&&mine)?'#07081A':'#fff'); txt(m.n.replace('點一下',''),bt.x,bt.y+bt.r+14,12,'#E8EAFF',{w:700,stroke:3,sc:'#07081A'}); });
   }
-  if(C.fb&&C.fb.t<900){ const u=C.fb.t/900; ctx.globalAlpha=1-u*u; txt(C.fb.txt,cx,FT+330-u*30,44,C.fb.c,{stroke:7,sc:'#07081A'}); ctx.globalAlpha=1; }
+  if(C.fb&&C.fb.t<900){ const u=C.fb.t/900; ctx.globalAlpha=1-u*u; txt(C.fb.txt,cx,FB-205-u*24,C.fb.txt.length>8?28:40,C.fb.c,{stroke:7,sc:'#07081A'}); ctx.globalAlpha=1; }
 }
 /* =========================================================
    Lucky 7 cheer rhythm game: tap, hold, slide, mash and swipe notes
@@ -5115,7 +5168,7 @@ hud.addEventListener('pointerdown',e=>{
     if(hit&&hit.f.girl){ G.gdrag={g:hit.f.girl,T:hit.T,lead:hit.f.lead,id:e.pointerId,y0:e.clientY,t:performance.now()}; fillGirlCard(hit.f.girl,hit.T,hit.f.lead); const el=$('girlCard'); el.hidden=false; el.style.transform='translateX(-50%) scale(.25)'; el.style.opacity='.6'; try{ hud.setPointerCapture(e.pointerId); }catch(_){} return; }
   }
   if(G.attract) return;
-  if(G.cer){ if(inRect(p,cerSkipRect())){ skipCeremony(); return; } G.cerSw={id:e.pointerId,x:e.clientX,y:e.clientY}; return; }
+  if(G.cer){ if(inRect(p,cerSkipRect())){ skipCeremony(); return; } const bt=cerBtnAt(p); if(bt){ cerInput(bt.g); haptic(12); return; } G.cerSw={id:e.pointerId,x:e.clientX,y:e.clientY}; return; }
   if(p.sq) return;
   if(p.joy){ const t=joyTarget(); G.joy={id:e.pointerId,sx:p.cx,sy:p.cy,dx:0,dy:0,c0:{x:t.x,y:t.y}}; try{ hud.setPointerCapture(e.pointerId); }catch(_){} return; }
   if(p.pb){ if(G.phase==='gauge') stopGauge(); else pickPitch(p.pb-1); return; }
@@ -5657,7 +5710,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010184819', box=document.getElementById('upd');
+  const BUILD='20261010193636', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
