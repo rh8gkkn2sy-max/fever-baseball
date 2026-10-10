@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.3（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.4（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.3（2026.10.10）</div>
+    <div class="ver">版本 2.20.4（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1814,6 +1814,28 @@ function pickPark(home,attract){
   if(!attract&&rnd()<.15) return {id:'TBD',sub:home.city+home.name+'・巨蛋主場'};
   return {id:home.id,sub:'今晚主場'};
 }
+// the home end's big flags: cloth that ripples (vertex shader) on poles the fans swing back and forth
+function placeFlags(T){
+  if(!S3.flags){ S3.flags=[]; S3.flagU={uTime:{value:0}};
+    const geo=new THREE.PlaneGeometry(2.4,1.5,16,6); geo.translate(1.2,0,0);
+    for(let i=0;i<8;i++){
+      const pole=new THREE.Group(), stick=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,3.2,6),new THREE.MeshStandardMaterial({color:0xdddddd,metalness:.5,roughness:.4}));
+      stick.position.y=1.6; pole.add(stick);
+      const mat=new THREE.MeshStandardMaterial({side:THREE.DoubleSide,roughness:.8});
+      mat.onBeforeCompile=sh=>{ sh.uniforms.uTime=S3.flagU.uTime; sh.uniforms.uSeed={value:i*1.7};
+        sh.vertexShader='uniform float uTime;\nuniform float uSeed;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloat k=position.x/2.4;\ntransformed.z+=sin(position.x*2.6-uTime*7.0+uSeed)*0.28*k+sin(position.y*3.0-uTime*5.0+uSeed)*0.08*k;\ntransformed.y-=k*k*0.15;'); };
+      const cloth=new THREE.Mesh(geo,mat); cloth.position.set(0.03,2.55,0); pole.add(cloth);
+      pole.userData={cloth,ph:i*0.9}; scene.add(pole); S3.flags.push(pole);
+    } }
+  // repaint for tonight's home club: their colours and word
+  const c=document.createElement('canvas'); c.width=256; c.height=160; const g=c.getContext('2d');
+  g.fillStyle=T.c1; g.fillRect(0,0,256,160); g.fillStyle=T.c2; g.fillRect(0,0,256,26); g.fillRect(0,134,256,26);
+  g.fillStyle=T.c2==='#FFFFFF'||T.c2==='#F4F4F6'?T.c3:'#FFFFFF'; g.font=`400 46px ${FONT_D}`; g.textAlign='center'; g.textBaseline='middle'; g.fillText(T.word.toUpperCase(),128,82);
+  const tex=canvasTex(c);
+  const spots=[-72,-64,-56,-48,48,56,64,72];
+  S3.flags.forEach((f,i)=>{ const s=spots[i], t=S3.standTop(s), p=polar(s,t.r-1.5); f.position.set(p.x,t.y-0.6,p.z); f.rotation.y=-s*D2R+Math.PI; f.scale.setScalar(1.8); const m=f.userData.cloth.material; m.map=tex; m.needsUpdate=true; f.visible=true; });
+}
+function updateFlags(t,hot){ if(!S3.flags) return; S3.flagU.uTime.value=t; S3.flags.forEach(f=>{ f.rotation.z=Math.sin(t*(1.6+hot*1.4)+f.userData.ph)*(0.35+hot*0.35); }); }
 function rollWeather(){ const r=rnd(); return r<.34?'clear':r<.5?'dusk':r<.67?'rain':r<.8?'fog':r<.9?'windOut':'windIn'; }
 function applyWeather(k){
   const Wx=WEATHERS[k]||WEATHERS.clear, pa=S3.sky.geometry.attributes.position, ca=S3.sky.geometry.attributes.color, top=col(Wx.top), hor=col(Wx.hor);
@@ -2666,6 +2688,7 @@ function newGame(hi,ai,li,diff,attract){
   for(let k=0;k<target;k++) ar[Math.floor(rnd()*6)]++;
   G.line.away=ar; G.score.home=hr; G.score.away=target;
   G.hits.home=hr+2+Math.floor(rnd()*4); G.hits.away=target+2+Math.floor(rnd()*4);
+  placeFlags(home);
   CHEER_OUTFIT=park.kind==='dome'||rnd()<.35?'battle':'jersey';  // big nights get the battle tops
   buildSquads(home,away);
   S3.trimMat.color.copy(col(home.hud)); S3.stTrim.material.color.copy(col(home.hud));
@@ -3521,6 +3544,7 @@ function update(dt){
   updateConfetti(dt/1000);
   updateCamera(dt);
   S3.CU.uTime.value=G.clock/1000; S3.SU.uTime.value=G.clock/1000;
+  updateFlags(G.clock/1000,(G.mood==='jump'||G.fwT>0)?1:userBatting()?0.4:0);
   const exc=G.fwT>0?0.35:0.12, homeOn=userBatting()||G.attract||G.over;
   S3.CU.uHome.value=homeOn?exc+(G.mood==='jump'?0.15:0):0.05; S3.CU.uAway.value=!homeOn?0.12:0.03;
   S3.SU.uHome.value=homeOn?0.16+(G.mood==='jump'?0.12:0):0.08; S3.SU.uAway.value=0.06;
@@ -5737,7 +5761,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010235407', box=document.getElementById('upd');
+  const BUILD='20261011000304', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
