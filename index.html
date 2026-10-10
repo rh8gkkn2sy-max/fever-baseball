@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.29（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.30（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.29（2026.10.11）</div>
+    <div class="ver">版本 2.30（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2558,19 +2558,19 @@ function pitchKeys(p){
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
 function batPose(o){ const g=o.g, d=o.bd, n=Math.hypot(d[0],d[1],d[2]);
   o.lh=[g[0],g[1],g[2]]; o.rh=[g[0]+d[0]/n*0.09,g[1]+d[1]/n*0.09,g[2]+d[2]/n*0.09]; return P(o); }
-const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.27,1.47,0.13],bd:[-0.3,0.88,-0.36],le:[0.12,1.05,0.42],re:[-0.62,1.34,-0.02],hd:[0,1.25,0.08]};
+const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.3,1.4,0.212],bd:[-0.305,0.83,-0.466],le:[-0.171,1.313,0.541],re:[-0.686,1.397,0.043],hd:[0,1.25,0.08]};
 const STANCE_MOD={
   std:{},
   open:{hr:[0,0.22,0],lf:[0.3,.08,-0.2],hd:[0,1.0,0.08]},
-  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.25,1.36,0.17],bd:[-0.4,0.82,-0.32],le:[0.12,0.96,0.42],re:[-0.6,1.24,-0.02]},
-  high:{g:[-0.25,1.58,0.1],bd:[-0.18,0.95,-0.26],hy:-0.08,le:[0.12,1.15,0.4],re:[-0.6,1.48,-0.02]},
+  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.34,1.3,0.3],bd:[-0.417,0.836,-0.356],le:[0.086,1.195,0.67],re:[-0.445,1.12,-0.197]},
+  high:{g:[-0.3,1.576,0.203],bd:[-0.315,0.838,-0.445],hy:-0.08,le:[0.12,1.3,0.45],re:[-0.54,1.23,-0.133]},
   kick:{hy:-0.1,lf:[0.3,.08,0.02]},
 };
 function batterSet(stance,left){
   const m=STANCE_MOD[stance]||{}, g0=m.g||BASE_STANCE.g;
   const st=batPose(Object.assign({},BASE_STANCE,m));
   const ld=batPose(Object.assign({},BASE_STANCE,m,{hx:-0.05,sp:[(m.sp||BASE_STANCE.sp)[0],-0.15,0],hr:[0,-0.32,0],lf:stance==='kick'?[0.18,0.5,0.12]:[0.28,0.17,0.0],lk:[0.6,0.9,1.0],g:[g0[0]-0.1,g0[1]+0.03,g0[2]-0.04],bd:[-0.45,0.88,-0.15]}));
-  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[-0.24,1.41,0.2],bd:[-0.45,0.88,-0.15],re:[-0.58,1.3,0.02]}));
+  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[-0.3,1.38,0.27],bd:[-0.5,0.82,-0.2],re:[-0.6,1.36,-0.18]}));
   const sw=[
     [0.000,sd],
     [0.022,batPose({hx:0.06,hy:-0.21,sp:[0.25,0.12,0],hr:[0,0.6,0],lf:[0.6,.08,0.03],rf:[-0.36,0.1,0.02],lk:[0.8,0.5,1.0],rk:[0,0.5,1.0],g:[-0.12,1.12,0.4],bd:[-0.78,0.28,0.56],le:[0.4,0.85,0.75],re:[-0.2,0.78,0.38],hd:[0,1.15,0.1]})],
@@ -4135,7 +4135,7 @@ function updateFigures(dt){
     else if(bf.mode==='load'){ p=bf.mt<0.3?S.load:lp(S.load,S.stride,ease((bf.mt-0.3)/0.22)); if(G.pitch&&G.pitch.done&&!G.play&&bf.mt>0.2) setMode(bf,'stance',0.5); }
     else if(G.phase==='cut'&&G.cut&&G.cut.type==='intro'&&G.cut.data.f===bf){ if(!bf.ritK) bf.ritK=ritualKeys(bf.p.ritual,BASE_STANCE,bf.p.bat==='L'); const u=G.cut.t/G.cut.dur; p=u<.75?sampleKeys(bf.ritK,u):lp(bf.ritK[bf.ritK.length-1][1],S.stance,ease((u-.75)/.22)); bf.noSpring=false; }
     else { const w=Math.sin(G.clock/380)*0.05; p=Object.assign({},S.stance); p.hy=S.stance.hy+Math.sin(G.clock/600)*0.01; p.lh=[S.stance.lh[0]+w*0.2,S.stance.lh[1],S.stance.lh[2]]; p.rh=[S.stance.rh[0]+w,S.stance.rh[1],S.stance.rh[2]+w*0.5]; }
-    bf.noSpring=bf.mode==='swing'||bf.mode==='load';
+    bf.noSpring=bf.mode==='swing'||bf.mode==='load'||bf.mode==='stance';
     drive(bf,p,dt);
     const bat=S3.bat;
     if(!G.batDrop||!G.batDrop.loose){
@@ -4144,6 +4144,9 @@ function updateFigures(dt){
       const d=new V3(tp[0]-g[0],tp[1]-g[1],tp[2]-g[2]).normalize();
       bat.position.set(g[0]-d.x*0.04,g[1]-d.y*0.04,g[2]-d.z*0.04);
       batFists(bf,true);
+      bat.quaternion.setFromUnitVectors(UPV,d); bat.updateMatrixWorld(true);
+      bat.userData.fists.forEach((m,i)=>{ const el=(i===0)===!left?bf.lEl:bf.rEl; el.getWorldPosition(_fe); bat.worldToLocal(_fe); _fe.y=0;
+        if(_fe.lengthSq()>1e-6) m.rotation.set(0,Math.atan2(-_fe.x,-_fe.z),0); });
       bat.quaternion.setFromUnitVectors(UPV,d); bat.scale.setScalar(1/bf.root.scale.x); bat.visible=true;
       // swing trail: sweep of the barrel for the first moments of the swing
       if(bf.mode==='swing'&&bf.mt<0.22){ bat.updateMatrixWorld(true); const a=new V3(0,0.45,0).applyMatrix4(bat.matrixWorld), b2=new V3(0,0.87,0).applyMatrix4(bat.matrixWorld); S3.swHist.unshift([a,b2]); if(S3.swHist.length>S3.swN) S3.swHist.pop(); }
@@ -4231,15 +4234,16 @@ function fielderInPlay(f,i,pl,dt){
 }
 // bend the stock swing so the barrel meets the pitch where it actually is (height, in/out, depth):
 // the sweet spot at the contact frame is solved once per swing and the hands carry the correction around contact
+const _fe=new V3();
 // while he holds the bat, his hands are two closed batting-glove fists wrapped round the handle (open hands hidden)
 function batFists(bf,on){
   const bat=S3.bat;
   if(!bat.userData.fists){ const fg=mergeParts([[new THREE.SphereGeometry(1,12,9),_M(0,0,0,0,0.046,0.05,0.05)],[new THREE.SphereGeometry(1,8,6),_M(0.028,0.012,0.032,0,0.017,0.03,0.017)],
-      [new THREE.CylinderGeometry(1,1,1,10),_M(0,-0.004,-0.006,0,0.04,0.03,0.04)]]);
+      [new THREE.CylinderGeometry(1,0.9,1,10),_M(0,0,-0.045,Math.PI/2,0.031,0.05,0.027)]]);  // the cuff points down the forearm (-z)
     bat.userData.fists=[0.045,0.135].map(y=>{ const m=new THREE.Mesh(fg,new THREE.MeshStandardMaterial({color:0xf2f2f2,roughness:.6})); m.position.set(0,y,0); m.castShadow=true; bat.add(m); return m; }); }
   const F=bat.userData.fists, hm=h=>h.children.filter(c=>c.isMesh);
   const prev=bat.userData.owner; if(prev&&prev!==bf) [prev.lHand,prev.rHand].forEach(h=>hm(h).forEach(m=>m.visible=true)); bat.userData.owner=on?bf:null;
-  if(on&&bf.p){ const c=(bf.p.look&&bf.p.look.gloves)||'#F2F2F2'; F.forEach(m=>{ m.visible=true; m.material.color.set(c); m.rotation.y=bf.p.bat==='L'?Math.PI:0; }); }
+  if(on&&bf.p){ const c=(bf.p.look&&bf.p.look.gloves)||'#F2F2F2'; F.forEach(m=>{ m.visible=true; m.material.color.set(c); }); }
   else F.forEach(m=>m.visible=false);
   [bf.lHand,bf.rHand].forEach(h=>hm(h).forEach(m=>m.visible=!on));
 }
@@ -6148,7 +6152,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011023833', box=document.getElementById('upd');
+  const BUILD='20261011024848', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
