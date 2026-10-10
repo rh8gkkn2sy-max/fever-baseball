@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.17（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.18（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.17（2026.10.10）</div>
+    <div class="ver">版本 2.18（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1428,18 +1428,19 @@ function arcStrip(rFn,y0,y1,s0,s1,step,uLen){
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
 // instanced crowd whose bounce runs in the vertex shader
-function crowdHook(m,U){ m.onBeforeCompile=sh=>{ sh.uniforms.uTime=U.uTime; sh.uniforms.uHome=U.uHome; sh.uniforms.uAway=U.uAway;
-  sh.vertexShader='attribute float aPhase;\nattribute float aTeam;\nuniform float uTime;\nuniform float uHome;\nuniform float uAway;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloat amp=aTeam<0.5?uHome:(aTeam<1.5?uAway:0.0);\ntransformed.y+=amp*max(0.0,sin(uTime*13.82+aPhase));'); }; return m; }
+// the stands bounce with their team; a wave (人浪) can run round them: uWave strength, uWaveA where its crest is (degrees around the park)
+function crowdHook(m,U){ U.uWave=U.uWave||{value:0}; U.uWaveA=U.uWaveA||{value:-120}; m.onBeforeCompile=sh=>{ sh.uniforms.uTime=U.uTime; sh.uniforms.uHome=U.uHome; sh.uniforms.uAway=U.uAway; sh.uniforms.uWave=U.uWave; sh.uniforms.uWaveA=U.uWaveA;
+  sh.vertexShader='attribute float aPhase;\nattribute float aTeam;\nattribute float aAng;\nuniform float uTime;\nuniform float uHome;\nuniform float uAway;\nuniform float uWave;\nuniform float uWaveA;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloat amp=aTeam<0.5?uHome:(aTeam<1.5?uAway:0.0);\ntransformed.y+=amp*max(0.0,sin(uTime*13.82+aPhase));\nfloat wd=(aAng-uWaveA)/12.0;\ntransformed.y+=uWave*1.05*exp(-wd*wd)*(0.85+0.3*fract(aPhase*7.13));'); }; return m; }
 function makeCrowd(seats,U,parent){
   const n=seats.length;
   const bodyG=new THREE.BoxGeometry(0.44,0.62,0.3); bodyG.translate(0,0.31,0);
   const headG=new THREE.SphereGeometry(0.12,6,5); headG.translate(0,0.74,0);
-  const phase=new Float32Array(n), team=new Float32Array(n);
+  const phase=new Float32Array(n), team=new Float32Array(n), ang=new Float32Array(n);
   const B=new THREE.InstancedMesh(bodyG,crowdHook(new THREE.MeshStandardMaterial({roughness:.85}),U),n);
   const Hd=new THREE.InstancedMesh(headG,crowdHook(new THREE.MeshStandardMaterial({color:col('#d9a882'),roughness:.8}),U),n);
   const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), sc=new V3(1,1,1), up=new V3(0,1,0);
-  seats.forEach((st,i)=>{ q.setFromAxisAngle(up,st.yaw); const s2=.9+rnd()*.25; sc.set(s2,s2,s2); m4.compose(st.p,q,sc); B.setMatrixAt(i,m4); Hd.setMatrixAt(i,m4); phase[i]=rnd()*1.2; });
-  [bodyG,headG].forEach(g=>{ g.setAttribute('aPhase',new THREE.InstancedBufferAttribute(phase,1)); g.setAttribute('aTeam',new THREE.InstancedBufferAttribute(team,1)); });
+  seats.forEach((st,i)=>{ q.setFromAxisAngle(up,st.yaw); const s2=.9+rnd()*.25; sc.set(s2,s2,s2); m4.compose(st.p,q,sc); B.setMatrixAt(i,m4); Hd.setMatrixAt(i,m4); phase[i]=rnd()*1.2; ang[i]=Math.atan2(st.p.x,-st.p.z)/D2R; });
+  [bodyG,headG].forEach(g=>{ g.setAttribute('aAng',new THREE.InstancedBufferAttribute(ang,1)); g.setAttribute('aPhase',new THREE.InstancedBufferAttribute(phase,1)); g.setAttribute('aTeam',new THREE.InstancedBufferAttribute(team,1)); });
   B.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(n*3),3);
   parent.add(B); parent.add(Hd);
   return {B,Hd,team,n,
@@ -3495,6 +3496,9 @@ function update(dt){
   const exc=G.fwT>0?0.35:0.12, homeOn=userBatting()||G.attract||G.over;
   S3.CU.uHome.value=homeOn?exc+(G.mood==='jump'?0.15:0):0.05; S3.CU.uAway.value=!homeOn?0.12:0.03;
   S3.SU.uHome.value=homeOn?0.16+(G.mood==='jump'?0.12:0):0.08; S3.SU.uAway.value=0.06;
+  // the wave: two laps round the park, left-field pole to right and back, ~5 s a lap
+  { const wt=G.waveT!=null?(G.clock-G.waveT)/1000:99, on=wt>=0&&wt<10.5, lap=(Math.max(0,wt)%5.2)/5.2, k=on?Math.min(1,wt/0.6)*Math.min(1,(10.5-wt)/0.8):0;
+    S3.CU.uWave.value=k; S3.CU.uWaveA.value=-105+lap*210; S3.SU.uWave.value=k; S3.SU.uWaveA.value=-80+lap*160; }
   // the whole park rises for a home run
   if(G.play&&G.play.res==='HR'&&G.play.tr.wallT!=null&&G.play.t>G.play.tr.wallT-0.6){ if(userBatting()) S3.CU.uHome.value=0.7; else S3.CU.uAway.value=0.6; }
   let a,b,c;
@@ -3624,7 +3628,7 @@ function startTrot(pl,done){
   const coach=(p,x,z)=>{ const c=figFor(p,T,side,'coach'); placeFig(c,x,z,faceYaw(x,z,0,-19.4)); c.from=null; c.spr=null; c.mode='coach'; return c; };
   const coaches=[coach(T.pitchers[1],23.6,-14.4),coach(T.pitchers[2],-23.6,-14.4)];
   G.trot={acts,act:null,t:0,fig:bf,curve,L,baseS,s:0,passed:0,speed:FAST()?12:10.2,mates,coaches,done,arrive:null};
-  G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0);
+  G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0); if(userBatting()) G.waveT=G.clock+1500;
   setMood('jump',12000); G.fwT=Math.max(G.fwT,5);
   if(userBatting()) leaderShout(fillT(SHOUT_T.trot,{n:curBatter().short}),true);
 }
@@ -4767,7 +4771,7 @@ function startLucky(){
   const ch=buildChart(132,4*60000/132,T);
   G.lk={notes:ch.notes,end:ch.end,score:0,combo:0,maxCombo:0,counts:{great:0,good:0,ok:0,miss:0},fx:[],parts:[],rings:[],shake:0,lead:4*60000/132,down:false,px:0,py:0,done:false,
     win:G.passive&&G.passive.rhythm?1.4:1};
-  G.phase='lucky'; G.t=0;
+  G.phase='lucky'; G.t=0; G.waveT=G.clock;
   setMarquee(`幸運七局！　全場起立　${T.call}`); setMood('skill',99999);
   sfx('horn');
   leaderShout(fillT(SHOUT_T.lucky,{tn:T.name}),true);
@@ -5653,7 +5657,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010184133', box=document.getElementById('upd');
+  const BUILD='20261010184819', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
