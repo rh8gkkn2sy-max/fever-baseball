@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.16.1（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.17（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.16.1（2026.10.10）</div>
+    <div class="ver">版本 2.17（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -697,15 +697,15 @@ function captainLines(){
     (p.lyrics||[p.chant]).filter(Boolean).forEach(l=>add(k,l));
     chanceLyrics(p,TEAMS[p.homeTeam]).forEach(l=>add(k,l)); });
   // call-and-response: the captain's call and the stands' answer (C| = crowd)
-  ['全壘打！','安打！','得分！','三振！'].forEach(t=>add('common',t));
-  ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！'].forEach(t=>add('common','C|'+t));
-  TEAMS.forEach(T=>add('t-'+T.id,'C|'+T.name+'！'));
+  ['全壘打！','安打！','得分！','三振！','加油！','好球！','勝利！'].forEach(t=>add('common',t));
+  ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！','勝利！'].forEach(t=>add('common','C|'+t));
+  TEAMS.forEach(T=>{ add('t-'+T.id,'C|'+T.name+'！'); add('t-'+T.id,T.name+'！'); });
   ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id, n=p.short||p.name; if(p.role) add(k,n+'加油！'); else { add(k,n+'！'); add(k,'C|'+n+'！'); } });
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
 // tw: keys recorded with the Taiwan-accent model; the captain only ever speaks those
-const VP={map:{},loading:{},clips:{},tw:new Set()}, VOICE_VER=7;
+const VP={map:{},loading:{},clips:{},tw:new Set()}, VOICE_VER=8;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
@@ -850,10 +850,13 @@ function songFor(kind,p,T){
       calls:[callSet(n+'！',n+'！'),callSet(big?'全壘打！':'安打！',big?'全壘打！':'安打！')],chant:[cKey(n+'！'),cKey(big?'全壘打！':'安打！')]}); s.lead=tm.leads[hashStr(p.id+'L')%tm.leads.length]; }
   else if(kind==='chance') s=makeSong(hashStr(p.id+'c'),{key:key-3,bpm:154,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,1,1,0,1,1,1,0],lyrics:chanceLyrics(p,T),
       calls:[callSet(n+'！',n+'！'),callSet('得分！','得分！')],chant:[cKey(n+'！'),cKey('得分！')]});
-  else if(kind==='anthem') s=makeSong(hashStr(T.id+'anthem'),{key,bpm:132,style:tm.style,lead:tm.leads[0]});
-  else if(kind==='lucky') s=makeSong(hashStr(T.id+'lucky'),{key,bpm:132,style:tm.style,lead:tm.leads[0]});
-  else if(kind==='win') s=makeSong(hashStr(T.id+'win'),{key,bpm:148,style:tm.style,lead:tm.leads[0]});
-  else if(kind==='closer') s=makeSong(hashStr(T.id+'closer'),{key:key-3,bpm:136,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,0,1,1,1,0,1,1]});
+  // every club song now has the captain's call and the stands' answer, not only the batters' songs
+  else if(kind==='anthem'||kind==='lucky') s=makeSong(hashStr(T.id+kind),{key,bpm:132,style:tm.style,lead:tm.leads[0],
+      calls:[callSet(T.name+'！',T.name+'！'),callSet('加油！','加油！')],chant:[cKey(T.name+'！'),cKey('加油！')]});
+  else if(kind==='win') s=makeSong(hashStr(T.id+'win'),{key,bpm:148,style:tm.style,lead:tm.leads[0],
+      calls:[callSet(T.name+'！',T.name+'！'),callSet('勝利！','勝利！')],chant:[cKey(T.name+'！'),cKey('勝利！')]});
+  else if(kind==='closer') s=makeSong(hashStr(T.id+'closer'),{key:key-3,bpm:136,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,0,1,1,1,0,1,1],
+      calls:[callSet('好球！','好球！'),callSet('三振！','三振！')],chant:[cKey('好球！'),cKey('三振！')]});
   else if(kind==='defense'){ const pn=p?(p.short||p.name):''; s=makeSong(hashStr(T.id+'def'),{key:key-5,bpm:128,style:tm.style,lead:tm.leads[1],pat:[1,0,0,0,1,0,1,0],
       calls:[callSet(pn+'加油！','加油！'),callSet('三振！','三振！')],chant:[cKey('好球！'),cKey('三振！')]}); }
   else if(kind==='k'){ const b=key+12, hits=[0,4,8,16,20,24,28,32,36,40,48,52,56]; s=makeSong(hashStr(T.id+'k'),{key,bpm:140,style:'k',lead:tm.leads[0],pat:[1,0,1,0,1,0,1,1],fixed:[[0,b+7],[4,b+7],[8,b+12],[16,b+7],[20,b+7],[24,b+12],[28,b+14],[32,b+7],[36,b+7],[40,b+12],[48,b+12],[52,b+14],[56,b+16]]}); for(let i=0;i<64;i++) if(!hits.includes(i)) s.mel[i]=null; s.len=s.mel.map(n=>n==null?0:3); }
@@ -5650,7 +5653,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010182833', box=document.getElementById('upd');
+  const BUILD='20261010184133', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
