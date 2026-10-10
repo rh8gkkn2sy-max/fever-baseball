@@ -935,7 +935,7 @@ function karaoke(){
    ========================================================= */
 const STYLES={kpop:'韓系偶像・帥氣',cute:'韓系偶像・甜美',marine:'韓系偶像・清新',idol:'韓系偶像・少女',hiphop:'韓系偶像・街頭',cyber:'韓系偶像・未來感'};
 const TEAMS=[
-  {id:'TB',city:'台北',name:'雷鳥',en:'THUNDERBIRDS',word:'Thunder',c1:'#FFC81E',c2:'#14213D',c3:'#FFFFFF',hud:'#FFC81E',
+  {id:'TB',city:'新北',name:'雷鳥',en:'THUNDERBIRDS',word:'Thunder',c1:'#FFC81E',c2:'#14213D',c3:'#FFFFFF',hud:'#FFC81E',
    home:{base:'#F7F7FA',pat:'pinstripe',pc:'#14213D',word:'#14213D',out:'#FFC81E',sleeve:'#14213D',pants:'#F1F1F5',cap:'#14213D',logo:'#FFC81E'},
    away:{base:'#14213D',pat:'pinstripe',pc:'#FFC81E',word:'#FFC81E',out:'#FFFFFF',sleeve:'#FFC81E',pants:'#B9BCC8',cap:'#14213D',logo:'#FFC81E'},
    mascot:{type:'bird',n:'雷雷'},squad:{n:'Thunder Bells',style:'kpop',top:'#14213D',bottom:'#FFC81E',trim:'#FFFFFF',boots:'#14213D',bootH:'long',pom:'#FFC81E',pom2:'#FFFFFF'},
@@ -965,11 +965,11 @@ const TEAMS=[
    mascot:{type:'cat',n:'虎虎'},squad:{n:'Wild Kittens',style:'hiphop',top:'#3A2414',bottom:'#F08A24',trim:'#FFF1D6',boots:'#141414',bootH:'sneaker',pom:'#F08A24',pom2:'#3A2414'},
    call:'石虎　石虎　出山囉！',slogan:'淺山的獵人',
    leaders:[{n:'可可',sk:'sweet',hair:'#3A1E12',hs:'bob'},{n:'娜娜',sk:'fire',hair:'#141010',hs:'pony'},{n:'琪琪',sk:'eye',hair:'#7A4A2A',hs:'long'}]},
-  {id:'TY',city:'新竹',name:'颶風',en:'TYPHOONS',word:'Typhoons',c1:'#8A5CFF',c2:'#111827',c3:'#5EF2FF',hud:'#A88BFF',
+  {id:'TY',city:'台北',name:'颶風',en:'TYPHOONS',word:'Typhoons',c1:'#8A5CFF',c2:'#111827',c3:'#5EF2FF',hud:'#A88BFF',
    home:{base:'#F2F0FF',pat:'sash',pc:'#8A5CFF',word:'#8A5CFF',out:'#111827',sleeve:'#111827',pants:'#ECEAF5',cap:'#111827',logo:'#5EF2FF'},
    away:{base:'#111827',pat:'split',pc:'#8A5CFF',word:'#5EF2FF',out:'#8A5CFF',sleeve:'#8A5CFF',pants:'#2A3142',cap:'#111827',logo:'#5EF2FF'},
    mascot:{type:'wind',n:'風風'},squad:{n:'Storm Lights',style:'cyber',top:'#111827',bottom:'#8A5CFF',trim:'#5EF2FF',boots:'#E8E8F0',bootH:'long',pom:'#5EF2FF',pom2:'#8A5CFF',glow:true},
-   call:'颶風　颶風　風暴來襲！',slogan:'九降風的速度',
+   call:'颶風　颶風　風暴來襲！',slogan:'天母山風的速度',
    leaders:[{n:'露比',sk:'sweet',hair:'#2A1610',hs:'long'},{n:'妮娜',sk:'fire',hair:'#C9C3D9',hs:'pony'},{n:'喬伊',sk:'eye',hair:'#1A1210',hs:'bob'}]},
 ];
 const SKILLS={
@@ -1656,12 +1656,11 @@ const WEATHERS={
 const PARKS={
   TB:{n:'雷鳥城堡',kind:'castle',seat:['#1e4fb8','#2a62d6'],riser:'#0d1f4e',wall:'#0b1f4a',trim:'#4fb3ff'},
   TBD:{n:'台北巨蛋',kind:'dome',seat:['#2f3f86','#243270'],riser:'#161c40',wall:'#0b1f4a',trim:'#ffd21f'},
-  TBT:{n:'天母球場',kind:'tianmu',seat:['#2f6b4a','#3d7d58'],riser:'#16301f',wall:'#173a2a',trim:'#ffc81e'},
   BB:{n:'黑熊洲際球場',kind:'canopy',seat:['#1f5a45','#2a6e55'],riser:'#10261f',wall:'#0e2a26',trim:'#e9c24f',board:1.45},
   WH:{n:'鯨浪府城球場',kind:'palms',seat:['#c0612b','#a8521f'],riser:'#3a1e10',wall:'#123a5a',trim:'#5ac8ff'},
   SG:{n:'海鷗湖畔球場',kind:'lake',seat:['#2b6a3a','#3a7d48'],riser:'#142a18',wall:'#0e2a26',trim:'#ff3b4e'},
   LC:{n:'石虎桃園球場',kind:'twodeck',seat:['#b0203a','#d0507a'],riser:'#3a0a14',wall:'#3a0a14',trim:'#ff8a2a'},
-  TY:{n:'颱風風城球場',kind:'mountains',seat:['#3a3f8a','#d8dcef'],riser:'#151a3a',wall:'#151a3a',trim:'#5ef2ff'},
+  TY:{n:'颶風天母球場',kind:'tianmu',seat:['#3a3f8a','#4a4fa0'],riser:'#151a3a',wall:'#151a3a',trim:'#5ef2ff'},
 };
 function buildPark(id){
   const K=PARKS[id]||PARKS.TB; if(S3.parkId===id) return K; S3.parkId=id;
@@ -1751,23 +1750,13 @@ function buildPark(id){
       const head=new THREE.Mesh(new THREE.BoxGeometry(6,3,.6),poleM); head.position.set(p.x,h+1.5,p.z); head.rotation.y=-s*D2R; g.add(head);
       const lamp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false,color:0xfff0c8})); lamp.position.set(p.x,h+1.5,p.z); lamp.scale.set(16,12,1); g.add(lamp); });
   }
-  if(K.kind==='mountains'){
-    // misty ridges beyond the outfield: a windy city under the hills
-    [[300,0x2a3456,90],[380,0x222a46,130],[460,0x1b2138,170]].forEach(([d,c,hgt],k)=>{ const pos=[]; for(let s=-80;s<=80;s+=4){ const a=polar(s,d), h=hgt*(0.45+0.55*Math.abs(Math.sin(s*0.09+k*1.7)*Math.cos(s*0.05+k)));
-        pos.push(a.x,-5,a.z,a.x,h,a.z); }
-      const idx=[]; for(let i=0;i<pos.length/6-1;i++){ const q=i*2; idx.push(q,q+1,q+2,q+1,q+3,q+2); }
-      const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals();
-      g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide,fog:true}))); });
-  }
   return K;
 }
-// where tonight's game is played: the Thunderbirds split Taipei between the castle, the dome and
-// Tianmu; any other club now and then rents the dome for a big home date, as CPBL clubs do
+// where tonight's game is played: each club's own ground, but any club may book the Taipei Dome
+// for a home date (as CPBL clubs do), and dome games end with a post-game concert
 function pickPark(home,attract){
-  if(attract) return {id:home.id,sub:'今晚主場'};
-  const r=rnd();
-  if(home.id==='TB') return r<.6?{id:'TB',sub:'今晚主場'}:r<.85?{id:'TBD',sub:'雷鳥巨蛋主場'}:{id:'TBT',sub:'雷鳥天母主場'};
-  return r<.07?{id:'TBD',sub:home.city+home.name+'・租借巨蛋主場'}:{id:home.id,sub:'今晚主場'};
+  if(!attract&&rnd()<.15) return {id:'TBD',sub:home.city+home.name+'・巨蛋主場'};
+  return {id:home.id,sub:'今晚主場'};
 }
 function rollWeather(){ const r=rnd(); return r<.34?'clear':r<.5?'dusk':r<.67?'rain':r<.8?'fog':r<.9?'windOut':'windIn'; }
 function applyWeather(k){
@@ -3197,7 +3186,14 @@ function gameOver(walkoff){
   SAVE.streak=win?(SAVE.streak||0)+1:0; G.streakBonus=win?Math.min(SAVE.streak-1,5)*40:0;
   G.coinsEarned=(win?300:h===a?180:120)+hits*10+G.hrs*30+G.ks*8+G.streakBonus;
   SAVE.coins+=G.coinsEarned; SAVE.games++; if(win) SAVE.wins++; persist();
-  setTimeout(showOver,2600);
+  if(G.park&&G.park.kind==='dome') after(2600,startConcert); else setTimeout(showOver,2600);
+}
+// the dome's post-game concert: the home squad takes the stage, lights down, lasers and fireworks
+function startConcert(){
+  const T=G.home; G.concert={t:0,T,fw:0};
+  popup('賽後演唱會',{sub:`${T.squad.n}・巨蛋 LIVE`,color:T.hud,size:56,dur:2800,y:260});
+  setMarquee(`巨蛋賽後演唱會　${T.squad.n}　LIVE　·　${T.call}`);
+  startCut('concert',16000,{side:'home'},()=>{ G.concert=null; restoreLights(); G.phase='over'; showOver(); });
 }
 /* =========================================================
    Per-frame update
@@ -3232,7 +3228,7 @@ function update(dt){
     }
     switch(G.phase){
       case 'wait': if(G.t>=G.waitDur){ const f=G.next; G.next=null; G.phase='idle'; if(f) f(); } break;
-      case 'cut': { const c2=G.cut; c2.t+=dt; if(c2.type==='show') updateShow(dt); if(c2.t>=c2.dur){ G.cut=null; G.phase='idle'; c2.onEnd&&c2.onEnd(); } } break;
+      case 'cut': { const c2=G.cut; c2.t+=dt; if(c2.type==='show') updateShow(dt); if(c2.type==='concert') updateConcert(dt); if(c2.t>=c2.dur){ G.cut=null; G.phase='idle'; c2.onEnd&&c2.onEnd(); } } break;
       case 'windup': if(G.t>=G.windDur) launch(); break;
       case 'flight': updateFlight(dt); break;
       case 'gauge': if(G.ring){ const R=G.ring, u=G.t/R.dur; R.r=R.r0*(1-u); if(R.wob){ R.ox=Math.sin(G.t/90)*R.wob*6; R.oy=Math.cos(G.t/120)*R.wob*6; } if(u>=1){ R.r=0; stopGauge(); } } break;
@@ -3447,6 +3443,20 @@ function updateSwingTrail(){
 function dropBat(){ G.batDrop.loose=true; G.batDrop.t=0; scene.attach(S3.bat); }
 
 /* ---------- light show ---------- */
+function concertStage(){ const c=G.cut; return !!(c&&c.type==='concert'&&(c.t/1000)%6.5<4); }
+function updateConcert(dt){
+  const C=G.concert; if(!C) return; C.t+=dt;
+  const L=S3.lights, t=C.t/1000, T=C.T, dim=t<1.2?1-t*0.7:t<15.2?0.16:Math.min(1,0.16+(t-15.2)/0.8);
+  L.hemi.intensity=L.base[0]*dim; L.key.intensity=L.base[1]*dim; L.fill.intensity=L.base[2]*dim; L.back.intensity=L.base[3]*dim;
+  S3.glows.forEach(g=>g.material.opacity=dim); S3.lampMat.color.setScalar(Math.max(.15,dim));
+  const on=t>1.0&&t<15.4, beat=t*(G.bpm||128)/60, cs=[col(T.hud),col(T.c3),col('#FF3D7F'),col('#9FE3FF')];
+  S3.beams.forEach((b,i)=>{ b.visible=on; if(!on) return; const a=t*1.4+i*2.1, k=i/(S3.beams.length-1)-.5;
+    b.lookAt(Math.sin(a)*30+k*20,0,-44+Math.cos(a*1.3)*22); b.material.color.copy(cs[(i+Math.floor(beat/2))%4]); b.material.opacity=0.2+0.3*(beat%1<.25?1:0); });
+  S3.spots.forEach((s2,i)=>{ s2.intensity=on?3.2:0; s2.color.copy(cs[i%4]); const a=t*1.1+i*1.6; s2.target.position.set(Math.sin(a)*24,0,-44+Math.cos(a)*24); });
+  S3.lasers.forEach((l,i)=>{ l.visible=on&&t>3; if(!l.visible) return; l.material.opacity=0.6; l.material.color.copy(cs[(i+1)%4]); l.rotation.set(-0.1+Math.sin(t*2.6+i)*0.16,(i-4.5)*0.12+Math.sin(t*1.2)*0.3,0); });
+  if(t>2&&t-C.fw>1.4){ C.fw=t; fwBurst(S3.fw); if(t>12) fwBurst(S3.fw); sfx('boom'); }
+  if(t>14.6&&!C.fin){ C.fin=true; for(let k=0;k<6;k++) fwBurst(S3.fw); confetti(300); G.flash=1; }
+}
 function updateShow(dt){
   const S=G.show; if(!S) return; S.t+=dt;
   const L=S3.lights, t=S.t/1000, T=S.T;
@@ -3616,7 +3626,7 @@ function squadRoutine(side){
   const withSig=(r,i)=>{ const a=r.slice(); a[i]=sig; return a; };
   if(side==='home'&&G.phase==='lucky') return {routine:withSig(['CLAPUP','PT_R','CLAPUP','PT_L','SHIMMY','WAVE_B','FLIP','JUMP'],4)};
   if(G.cut&&G.cut.type==='kdance'&&G.cut.data.side===side) return {routine:K_SEQ};
-  if(G.attract) return {routine:withSig(MOVE_POOL[T.squad.style],3)};
+  if(G.attract||(G.cut&&G.cut.type==='concert')) return {routine:withSig(MOVE_POOL[T.squad.style],3)};
   const R=TEAM_ROUTINES[T.id]||TEAM_ROUTINES.TB, blk=Math.floor(G.beatPos/16);
   if(side==='home'&&G.comebackT&&G.clock-G.comebackT<14000) return {routine:R.come};
   if(batSide()===side) return {routine:G.chance?withSig(CHANCE_SEQ,5):blk%3===2?R.a:withSig(curBatter().dance,5)};
@@ -3632,7 +3642,7 @@ function updateSquads(dt){
     const cut=G.cut;
     if(cut&&cut.data&&cut.data.side===side&&cut.type==='celebrate') mood='jump';
     if(cut&&cut.type==='skill'&&side==='home') mood='skill';
-    if(cut&&cut.type==='kdance'&&side==='home') mood='routine';
+    if(cut&&(cut.type==='kdance'||cut.type==='concert')&&side==='home') mood='routine';
     if(side==='away'&&G.half==='top'&&cut&&cut.type==='celebrate'&&cut.data.side==='away') mood='jump';
     const formName=FORM_SEQ[st][Math.floor(b/8)%4];
     const form=FORMS[formName];
@@ -3748,6 +3758,7 @@ function updateCamera2(dt){
       L.face.position.copy(h).addScaledVector(fwd,1.2).add(new V3(0,0.4,0)); L.face.intensity=1.6;
       return;
     }
+    if(c.type==='concert'){ const t=c.t/1000, a=-0.9+t*0.09; cam.position.set(Math.sin(a)*55,14+Math.sin(t*0.4)*6,-40+Math.cos(a)*55); cam.lookAt(0,6,-44); return; }
     if(c.type==='show'){
       const S=G.show, t=S.t/1000, f=G.fielders[0];
       if(S.big&&t<2.2){ const a=-0.6+t*0.25; cam.position.set(Math.sin(a)*70,26+t*3,10+Math.cos(a)*20); cam.lookAt(0,4,-45); return; }
@@ -3806,6 +3817,11 @@ function updateCamera2(dt){
 function stageCutCam(c){
   const u=c.t/c.dur, n=c.type==='skill'?1:Math.floor(u*3)%3, k=(u*3)%1;
   if(c.type==='skill'){ cutCam.position.set(lerp(-1.2,1.2,u),1.25,2.6); cutCam.lookAt(-0.55,1.2,0.25); return; }
+  if(c.type==='concert'){ const t=c.t/1000, sh=Math.floor(t/6.5)%3, k=(t%6.5)/4;
+    if(sh===0){ cutCam.position.set(lerp(-2,2,k),1.4,lerp(8.5,6.8,k)); cutCam.lookAt(0,1.4,0); }
+    else if(sh===1){ cutCam.position.set(lerp(-3.2,-1.6,k),0.45,3.4); cutCam.lookAt(0,1.6,0); }
+    else { cutCam.position.set(lerp(1.2,0.2,k),1.55,lerp(3.4,2.8,k)); cutCam.lookAt(-0.2,1.45,0); }
+    return; }
   if(G.phase==='lucky'){ const a=G.clock*0.0004; cutCam.position.set(Math.sin(a)*1.5,1.6,7.5); cutCam.lookAt(0,1.6,0); return; }
   if(n===0){ cutCam.position.set(lerp(-1.5,1.5,k),1.5,7.6); cutCam.lookAt(0,1.4,0); }
   else if(n===1){ cutCam.position.set(lerp(1.3,0.3,k),1.6,3.8); cutCam.lookAt(-0.3,1.45,0); }
@@ -3838,7 +3854,7 @@ function render(){
     renderer.setScissorTest(true);
     const vp=r=>{ const c=cssRect(r,LAYOUT.tall&&r.y<FB?'field':null); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h); };
     renderer.setViewport(0,0,cssW,cssH); renderer.setScissor(0,0,cssW,cssH); renderer.setClearColor(0x0a0d1e,1); renderer.clear();
-    const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type));
+    const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type))||concertStage();
     const fsrc=LAYOUT.fieldSrc||{x:0,y:FT,w:W,h:FB-FT}, asp=fsrc.w/fsrc.h, vk=fsrc.h/(FB-FT);
     if(Math.abs(cam.aspect-asp)>1e-4||cam.vk!==vk){ cam.vk=vk;
       cam.fov=2*Math.atan(Math.tan(36*D2R/2)*vk)/D2R; cam.aspect=asp; cam.updateProjectionMatrix();
@@ -4247,7 +4263,7 @@ function drawJoystick(J){
 }
 // slim cheer-energy bar; when full it turns into a glowing button
 function drawEnergyBar(e){
-  if(!e||G.phase==='lucky') return;
+  if(!e||G.phase==='lucky'||G.over) return;
   const full=G.gauge>=100, T=G.home, pulse=.5+.5*Math.sin(G.clock/150);
   if(G.skill){ ctx.fillStyle='rgba(7,8,26,.7)'; rr(e.x,e.y,e.w,e.h,e.h/2); ctx.fill(); ctx.strokeStyle=T.hud; ctx.lineWidth=2; ctx.stroke();
     ctx.font=`900 ${e.h*0.5}px ${FONT_TC}`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=T.hud; ctx.fillText(`應援中・${SKILLS[G.skill].n}`,e.x+e.w/2,e.y+e.h/2+1,e.w-12); return; }
@@ -5148,6 +5164,7 @@ function musicMode(){
   if(!G) return null;
   const H=G.home, A=G.away;
   if(G.attract) return {key:'title'+H.id,song:songFor('anthem',null,H),vol:.45};
+  if(G.cut&&G.cut.type==='concert') return {key:'concert'+H.id,song:songFor('anthem',null,H),vol:1};
   if(G.over) return G.score.home>G.score.away?{key:'win',song:songFor('win',null,H),vol:1}:null;
   if(G.phase==='trot') return {key:'trot'+batTeam().id,song:songFor('win',null,batTeam()),vol:1};
   if(G.show&&G.show.big) return {key:'closer'+G.show.T.id,song:songFor('closer',null,G.show.T),vol:1};
@@ -5237,7 +5254,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010122845', box=document.getElementById('upd');
+  const BUILD='20261010123404', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
