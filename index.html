@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.21（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.22（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.21（2026.10.11）</div>
+    <div class="ver">版本 2.22（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2388,12 +2388,12 @@ function pitchKeys(p){
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
 function batPose(o){ const g=o.g, d=o.bd, n=Math.hypot(d[0],d[1],d[2]);
   o.lh=[g[0],g[1],g[2]]; o.rh=[g[0]+d[0]/n*0.09,g[1]+d[1]/n*0.09,g[2]+d[2]/n*0.09]; return P(o); }
-const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.09,1.28,0.31],bd:[-0.3,0.95,-0.1],le:[0.05,0.95,0.6],re:[-0.52,1.25,-0.05],hd:[0,1.25,0.08]};
+const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.16,1.33,0.2],bd:[-0.36,0.86,-0.34],le:[0.04,1.0,0.36],re:[-0.5,1.24,-0.12],hd:[0,1.25,0.08]};
 const STANCE_MOD={
   std:{},
   open:{hr:[0,0.22,0],lf:[0.3,.08,-0.2],hd:[0,1.0,0.08]},
-  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.08,1.18,0.33],bd:[-0.45,0.85,-0.08]},
-  high:{g:[-0.1,1.4,0.3],bd:[-0.15,1.0,-0.05],hy:-0.08,re:[-0.55,1.42,0.0]},
+  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.14,1.2,0.24],bd:[-0.45,0.8,-0.3],le:[0.04,0.9,0.36],re:[-0.48,1.12,-0.12]},
+  high:{g:[-0.17,1.45,0.17],bd:[-0.2,0.95,-0.25],hy:-0.08,le:[0.04,1.1,0.34],re:[-0.5,1.42,-0.1]},
   kick:{hy:-0.1,lf:[0.3,.08,0.02]},
 };
 function batterSet(stance,left){
@@ -2425,13 +2425,20 @@ const FSTAND=P({hy:-0.04,sp:[0.1,0,0],lf:[0.16,.08,0.03],rf:[-0.16,.08,0.03],lh:
 const RLEAD=P({hy:-0.2,sp:[0.35,0,0],lf:[0.3,.08,0.0],rf:[-0.3,.08,0.0],lk:[0.5,0.6,1],rk:[-0.5,0.6,1],lh:[0.3,0.8,0.25],rh:[-0.3,0.8,0.25]});
 const WALK=ph=>{ const s=Math.sin(ph), c=Math.cos(ph); return P({hy:-0.03,sp:[0.06,0,0],lf:[0.11,0.08+Math.max(0,s)*0.1,0.05-c*0.28],rf:[-0.11,0.08+Math.max(0,-s)*0.1,0.05+c*0.28],lh:[0.24,0.92,0.04+c*0.14],rh:[-0.24,0.92,0.04-c*0.14]}); };
 // sprint: forward lean, knees driving up in front, heels kicking up behind, elbows at 90 pumping hip-to-chin
+// a sprint, not a brisk walk: each foot plants under the hips and pushes back along the dirt, then the heel kicks
+// up toward the seat and the knee drives forward and high; arms bent at 90 pump from hip to chin opposite the legs;
+// the body leans in and floats a little between steps
 function runPose(ph,lean){
-  const s=Math.sin(ph), c=Math.cos(ph), up=x=>Math.max(0,x);
-  const footY=(sn,cs)=>0.08+up(sn)*(0.3+0.22*up(cs))+up(-cs)*up(sn)*0.12;
-  return P({hy:-0.1+Math.abs(s)*0.05,sp:[lean==null?0.38:lean+0.08,s*0.2,0],hr:[0,-s*0.16,0],hd:[-0.12,0,0],
-    lf:[0.11,footY(s,c),0.06-c*0.5],rf:[-0.11,footY(-s,-c),0.06+c*0.5],
-    lk:[0.1,0.6,1.4],rk:[-0.1,0.6,1.4],
-    lh:[0.2,1.08+0.26*up(c),0.12+c*0.34],rh:[-0.2,1.08+0.26*up(-c),0.12-c*0.34],le:[0.32,0.95,-0.6],re:[-0.32,0.95,-0.6]});
+  const up=x=>Math.max(0,x);
+  const leg=a=>{ const sn=Math.sin(a), cs=Math.cos(a), swing=up(cs);   // cs>0: the foot is in the air coming through
+    const z=0.42*sn+0.06, y=0.08+Math.pow(swing,0.75)*(0.22+0.32*up(-sn+0.35));
+    return [z,y,swing]; };
+  const L=leg(ph), R=leg(ph+Math.PI), s=Math.sin(ph), fl=up(Math.cos(2*ph));
+  return P({hy:-0.07+fl*0.06,sp:[lean==null?0.32:lean+0.06,s*0.22,0],hr:[0,-s*0.18,0],hd:[-0.18,0,0],
+    lf:[0.1,L[1],L[0]],rf:[-0.1,R[1],R[0]],
+    lk:[0.12,0.75+L[2]*0.2,1.4],rk:[-0.12,0.75+R[2]*0.2,1.4],
+    lh:[0.19,1.1+0.24*up(-s),0.04-0.3*s],rh:[-0.19,1.1+0.24*up(s),0.04+0.3*s],
+    le:[0.3,1.0,-0.55],re:[-0.3,1.0,-0.55]});
 }
 // fielder's throw (the ball leaves at 0.30): transfer, turn the glove side to the target, arm up in the L, stride, release out front, follow through
 const THROWK=[
@@ -4273,9 +4280,15 @@ function updateCamera2(dt){
         const rn=hl.type==='xbh'?br:pl.runners.find(r=>r.path.length>1&&r.path[r.path.length-1].distanceTo(B)<0.2)||br;
         const prev=rn&&rn.path.length>1?rn.path[rn.path.length-2]:new V3(0,0,0), dir=B.clone().sub(prev).setY(0).normalize();
         const out=new V3(B.x,0,B.z+19.4); if(out.lengthSq()<1) out.set(0,0,1); out.normalize();
-        pos=B.clone().addScaledVector(dir,4.2).addScaledVector(out,2.2).add(new V3(0,1.1,0));
-        look=B.clone().lerp(rn?rn.fig.root.position:B,0.35).add(new V3(0,0.6,0));
+        pos=B.clone().addScaledVector(dir,2.7).addScaledVector(out,1.5).add(new V3(0,0.75,0));   // tight and low: the slide fills the frame
+        look=B.clone().lerp(rn?rn.fig.root.position:B,0.3).add(new V3(0,0.5,0));
         if(!pl.cutB){ pl.cutB=true; cam.position.copy(pos); G.camLook.copy(look); }
+      }else if(pl.ev&&pl.t>pl.ev.t-0.6&&pl.t<pl.ev.t+0.7){
+        // the fielder getting to it: close on him as he gathers the ball and comes up throwing
+        const f=G.fielders[pl.ev.k], fp=f.root.position, toBall=new V3(pl.ev.p.x-fp.x,0,pl.ev.p.z-fp.z), side=new V3(-toBall.z,0,toBall.x).normalize();
+        if(side.lengthSq()<0.5) side.set(1,0,0);
+        pos=fp.clone().addScaledVector(side,4.6).add(new V3(0,1.5,0)).addScaledVector(new V3(fp.x,0,fp.z).normalize(),1.2); look=fp.clone().add(new V3(0,0.95,0));
+        if(!pl.cutF){ pl.cutF=true; cam.position.copy(pos); G.camLook.copy(look); }
       }else if(pl.t<0.5&&hl.type==='xbh'){ pos=new V3(bp.x+dx*2.4,1.3,bp.z-2.2); look=new V3(bp.x+dx*0.25,1.15,bp.z); if(G.camT<30||pl.t<0){ cam.position.copy(pos); G.camLook.copy(look); } }
       else {
         // high behind the plate: the ball, where it comes down, and every runner
@@ -5821,7 +5834,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011013338', box=document.getElementById('upd');
+  const BUILD='20261011013734', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
