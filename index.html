@@ -199,7 +199,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.5（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.6（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -221,7 +221,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.5（2026.10.10）</div>
+    <div class="ver">版本 2.6（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1654,7 +1654,8 @@ const WEATHERS={
 };
 /* ---------- home parks: each club's ground, inspired by the CPBL's real venues (names are our own) ---------- */
 const PARKS={
-  TB:{n:'雷鳥巨蛋',kind:'dome',seat:['#2f3f86','#243270'],riser:'#161c40',wall:'#0b1f4a',trim:'#ffd21f'},
+  TB:{n:'雷鳥城堡',kind:'castle',seat:['#1e4fb8','#2a62d6'],riser:'#0d1f4e',wall:'#0b1f4a',trim:'#4fb3ff'},
+  TBD:{n:'台北巨蛋',kind:'dome',seat:['#2f3f86','#243270'],riser:'#161c40',wall:'#0b1f4a',trim:'#ffd21f'},
   BB:{n:'黑熊洲際球場',kind:'canopy',seat:['#1f5a45','#2a6e55'],riser:'#10261f',wall:'#0e2a26',trim:'#e9c24f',board:1.45},
   WH:{n:'鯨浪府城球場',kind:'palms',seat:['#c0612b','#a8521f'],riser:'#3a1e10',wall:'#123a5a',trim:'#5ac8ff'},
   SG:{n:'海鷗湖畔球場',kind:'lake',seat:['#2b6a3a','#3a7d48'],riser:'#142a18',wall:'#0e2a26',trim:'#ff3b4e'},
@@ -1682,6 +1683,21 @@ function buildPark(id){
     for(let i=0;i<24;i++){ const a=i/24*Math.PI*2, rib=new THREE.Mesh(new THREE.TorusGeometry(175,0.6,4,48,Math.PI*0.42),M2(0x5d667e)); rib.position.copy(shell.position); rib.rotation.set(0,a,Math.PI/2); rib.rotation.order='YXZ'; g.add(rib); }
     const ring=new THREE.Mesh(new THREE.TorusGeometry(95,1.2,6,96),new THREE.MeshBasicMaterial({color:0xfff6dc,toneMapped:false})); ring.rotation.x=Math.PI/2; ring.position.set(0,62,-45); g.add(ring);
     const ring2=new THREE.Mesh(new THREE.TorusGeometry(130,0.9,6,96),new THREE.MeshBasicMaterial({color:col(K.trim),toneMapped:false})); ring2.rotation.x=Math.PI/2; ring2.position.set(0,44,-45); g.add(ring2);
+  }
+  if(K.kind==='castle'){
+    // the castle: crenellated parapets along the top of the stands, turrets by the foul poles,
+    // a blue LED ribbon, and a cheer stage out in right field
+    const stoneM=M2(0x2a3a66,{roughness:.7}), capM=M2(0x1e4fb8,{roughness:.5,metalness:.2});
+    for(let s=-86;s<=86;s+=3){ const t=top(s), p=polar(s,t.r+0.3), m=new THREE.Mesh(new THREE.BoxGeometry(1.6,s%6===0?2.6:1.2,0.9),stoneM); m.position.set(p.x,t.y+(s%6===0?1.3:0.6),p.z); m.rotation.y=-s*D2R; g.add(m); }
+    [-50,50,-88,88].forEach(s=>{ const t=top(s), p=polar(s,t.r+4), h=t.y+16;
+      const tw=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.6,h,12),stoneM); tw.position.set(p.x,h/2,p.z); g.add(tw);
+      const roof=new THREE.Mesh(new THREE.ConeGeometry(4.2,7,12),capM); roof.position.set(p.x,h+3.5,p.z); g.add(roof);
+      const flag=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.4),new THREE.MeshBasicMaterial({color:col(K.trim),side:THREE.DoubleSide})); flag.position.set(p.x+1.2,h+8,p.z); g.add(flag);
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,3,4),M2(0xdddddd)); pole.position.set(p.x,h+7.6,p.z); g.add(pole); });
+    const led=new THREE.Mesh(arcStrip(s=>top(s).r+0.2,0,0.9,-86,86,2,60),new THREE.MeshBasicMaterial({color:col(K.trim),side:THREE.DoubleSide,toneMapped:false}));
+    const la=led.geometry.attributes.position.array; for(let i=1;i<la.length;i+=3){ const x=la[i-1], z=la[i+1], s=Math.atan2(x,-z)/D2R; la[i]+=top(s).y-2.2; } led.geometry.attributes.position.needsUpdate=true; g.add(led);
+    const sp=polar(32,S3.standInner(32)-0.8), stage=new THREE.Mesh(new THREE.BoxGeometry(8,0.6,3),M2(0x0d1f4e)); stage.position.set(sp.x,3.6,sp.z); stage.rotation.y=-32*D2R; g.add(stage);
+    const sl=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false,color:col(K.trim)})); sl.position.set(sp.x,6,sp.z); sl.scale.set(12,8,1); g.add(sl);
   }
   if(K.kind==='canopy'){
     // white wing canopies over the infield stands, lights along the leading edge
@@ -2519,7 +2535,7 @@ function newGame(hi,ai,li,diff,attract){
     mood:'idle',moodT:0,marq:{s:'',x:0},board:null,fwT:0,over:false,flash:0,show:null,
     clock:0,beatPos:0,bpm:132,camMode:attract?'orbit':'fly',camT:0,play:null,foul:null,lastSwingT:-9,relClock:null,
     seen:{},coinsEarned:0};
-  const park=buildPark(home.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:'今晚主場',color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
+  const park=buildPark(home.id==='TB'&&!attract&&rnd()<.3?'TBD':home.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:'今晚主場',color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
   G.sq={home:squadOf(hi,!attract),away:squadOf(ai,false)};
   if(li!=null&&!attract) G.sq.home.cap=clamp(li,0,G.sq.home.girls.length-1);
   const capG=G.sq.home.girls[G.sq.home.cap];
@@ -5196,7 +5212,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010114511', box=document.getElementById('upd');
+  const BUILD='20261010121817', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
