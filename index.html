@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.5（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.6（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.5（2026.10.11）</div>
+    <div class="ver">版本 2.20.6（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1443,8 +1443,14 @@ function makeCrowd(seats,U,parent){
   [bodyG,headG].forEach(g=>{ g.setAttribute('aAng',new THREE.InstancedBufferAttribute(ang,1)); g.setAttribute('aPhase',new THREE.InstancedBufferAttribute(phase,1)); g.setAttribute('aTeam',new THREE.InstancedBufferAttribute(team,1)); });
   B.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(n*3),3);
   parent.add(B); parent.add(Hd);
+  const stG=mergeParts([[new THREE.CylinderGeometry(0.035,0.035,0.62,5),_M(-0.12,0.95,0.05,0,1,1,1)],[new THREE.CylinderGeometry(0.035,0.035,0.62,5),_M(0.12,0.95,0.05,0,1,1,1)]]);
+  stG.setAttribute('aAng',bodyG.attributes.aAng); stG.setAttribute('aPhase',bodyG.attributes.aPhase); stG.setAttribute('aTeam',bodyG.attributes.aTeam);
+  const St=new THREE.InstancedMesh(stG,crowdHook(new THREE.MeshStandardMaterial({roughness:.4,emissiveIntensity:.35}),U),n); parent.add(St);
+  const mats=[]; seats.forEach((st,i)=>{ const m=new THREE.Matrix4(); B.getMatrixAt(i,m); mats.push(m); });
+  const zero=new THREE.Matrix4().makeScale(0,0,0);
+  for(let i=0;i<n;i++) St.setMatrixAt(i,zero);  // nobody holds sticks until the stands are painted for a game
   return {B,Hd,team,n,
-    paint(hc,h3,ac){ const gr=col('#c9cbe0'); for(let i=0;i<n;i++){ const k=rnd(); const c=k<.62?hc:k<.78?h3:k<.94?ac:gr; B.instanceColor.setXYZ(i,c.r,c.g,c.b); team[i]=k<.78?0:k<.94?1:2; } B.instanceColor.needsUpdate=true; bodyG.attributes.aTeam.needsUpdate=true; headG.attributes.aTeam.needsUpdate=true; }};
+    paint(hc,h3,ac){ const gr=col('#c9cbe0'); St.material.color.copy(hc); St.material.emissive.copy(hc); for(let i=0;i<n;i++){ const k=rnd(); const c=k<.62?hc:k<.78?h3:k<.94?ac:gr; B.instanceColor.setXYZ(i,c.r,c.g,c.b); team[i]=k<.78?0:k<.94?1:2; St.setMatrixAt(i,team[i]===0&&rnd()<.7?mats[i]:zero); } St.instanceMatrix.needsUpdate=true; B.instanceColor.needsUpdate=true; bodyG.attributes.aTeam.needsUpdate=true; headG.attributes.aTeam.needsUpdate=true; }};
 }
 
 function buildWorld(){
@@ -5773,7 +5779,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011000425', box=document.getElementById('upd');
+  const BUILD='20261011000540', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
