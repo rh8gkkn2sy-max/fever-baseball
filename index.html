@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.28（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.29（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.28（2026.10.11）</div>
+    <div class="ver">版本 2.29（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -4057,7 +4057,7 @@ function updateSwingTrail(){
     S3.swPos.set([e[0].x,e[0].y,e[0].z,e[1].x,e[1].y,e[1].z],i*6); S3.swCol.set([0,k*.25,k*.45,k*.75,k*.9,k],i*6); }
   S3.swTrail.geometry.attributes.position.needsUpdate=true; S3.swTrail.geometry.attributes.color.needsUpdate=true;
 }
-function dropBat(){ G.batDrop.loose=true; G.batDrop.t=0; scene.attach(S3.bat); }
+function dropBat(){ G.batDrop.loose=true; G.batDrop.t=0; scene.attach(S3.bat); if(G.batterFig) batFists(G.batterFig,false); }
 
 /* ---------- light show ---------- */
 function updateShow(dt){
@@ -4143,6 +4143,7 @@ function updateFigures(dt){
       const lp2=bf.last, left=bf.p.bat==='L', g=left?lp2.rh:lp2.lh, tp=left?lp2.lh:lp2.rh;
       const d=new V3(tp[0]-g[0],tp[1]-g[1],tp[2]-g[2]).normalize();
       bat.position.set(g[0]-d.x*0.04,g[1]-d.y*0.04,g[2]-d.z*0.04);
+      batFists(bf,true);
       bat.quaternion.setFromUnitVectors(UPV,d); bat.scale.setScalar(1/bf.root.scale.x); bat.visible=true;
       // swing trail: sweep of the barrel for the first moments of the swing
       if(bf.mode==='swing'&&bf.mt<0.22){ bat.updateMatrixWorld(true); const a=new V3(0,0.45,0).applyMatrix4(bat.matrixWorld), b2=new V3(0,0.87,0).applyMatrix4(bat.matrixWorld); S3.swHist.unshift([a,b2]); if(S3.swHist.length>S3.swN) S3.swHist.pop(); }
@@ -4230,6 +4231,18 @@ function fielderInPlay(f,i,pl,dt){
 }
 // bend the stock swing so the barrel meets the pitch where it actually is (height, in/out, depth):
 // the sweet spot at the contact frame is solved once per swing and the hands carry the correction around contact
+// while he holds the bat, his hands are two closed batting-glove fists wrapped round the handle (open hands hidden)
+function batFists(bf,on){
+  const bat=S3.bat;
+  if(!bat.userData.fists){ const fg=mergeParts([[new THREE.SphereGeometry(1,12,9),_M(0,0,0,0,0.046,0.05,0.05)],[new THREE.SphereGeometry(1,8,6),_M(0.028,0.012,0.032,0,0.017,0.03,0.017)],
+      [new THREE.CylinderGeometry(1,1,1,10),_M(0,-0.004,-0.006,0,0.04,0.03,0.04)]]);
+    bat.userData.fists=[0.045,0.135].map(y=>{ const m=new THREE.Mesh(fg,new THREE.MeshStandardMaterial({color:0xf2f2f2,roughness:.6})); m.position.set(0,y,0); m.castShadow=true; bat.add(m); return m; }); }
+  const F=bat.userData.fists, hm=h=>h.children.filter(c=>c.isMesh);
+  const prev=bat.userData.owner; if(prev&&prev!==bf) [prev.lHand,prev.rHand].forEach(h=>hm(h).forEach(m=>m.visible=true)); bat.userData.owner=on?bf:null;
+  if(on&&bf.p){ const c=(bf.p.look&&bf.p.look.gloves)||'#F2F2F2'; F.forEach(m=>{ m.visible=true; m.material.color.set(c); m.rotation.y=bf.p.bat==='L'?Math.PI:0; }); }
+  else F.forEach(m=>m.visible=false);
+  [bf.lHand,bf.rHand].forEach(h=>hm(h).forEach(m=>m.visible=!on));
+}
 function swingToBall(bf,S,p){
   const tgt=(G.play&&G.play.p0)||(G.pitch&&G.pitch.end3); if(!tgt) return p;
   const key=tgt.x.toFixed(3)+tgt.y.toFixed(3)+bf.yaw.toFixed(2)+bf.root.position.x.toFixed(2);
@@ -6135,7 +6148,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011023433', box=document.getElementById('upd');
+  const BUILD='20261011023833', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
