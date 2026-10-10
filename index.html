@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.23（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.24（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -254,8 +254,8 @@ html,body,#wrap,#stage{touch-action:manipulation}
     </div>
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
-    <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.23（2026.10.11）</div>
+    <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
+    <div class="ver">版本 2.24（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1269,7 +1269,7 @@ function dailyMissions(){
   return SAVE.daily.list;
 }
 function missionEvent(k,n){
-  if(typeof G==='undefined'||!G||G.attract) return;
+  if(typeof G==='undefined'||!G||G.attract||G.practice) return;
   let changed=false;
   dailyMissions().forEach(m=>{ if(m.k===k&&m.p<m.g){ m.p=Math.min(m.g,m.p+(n||1)); changed=true; if(m.p>=m.g) popup(`任務完成！${m.t}`,{color:'#7CFF8A',size:26,y:FT+210,dur:1800}); } });
   if(changed) persist();
@@ -2720,7 +2720,7 @@ function addGauge(v){ if(G.attract) return; if(v>0&&G.passive&&G.passive.boost) 
 function startCut(type,dur,data,onEnd){ G.phase='cut'; G.cut={type,t:0,dur,data:data||{},onEnd,skip:true}; }
 function skipCut(){ if(G.phase==='cut'&&G.cut&&G.cut.skip&&G.cut.t>250){ G.cut.t=G.cut.dur; } }
 
-function newGame(hi,ai,li,diff,attract){
+function newGame(hi,ai,li,diff,attract,practice){
   if(typeof G!=='undefined'&&G&&G.cer){ cerCleanup(); restoreLights(); }
   if(S3.figRoot) scene.remove(S3.figRoot);
   S3.figRoot=new THREE.Group(); scene.add(S3.figRoot); FIGS={};
@@ -2736,6 +2736,8 @@ function newGame(hi,ai,li,diff,attract){
     mood:'idle',moodT:0,marq:{s:'',x:0},board:null,fwT:0,over:false,flash:0,show:null,
     clock:0,beatPos:0,bpm:132,camMode:attract?'orbit':'fly',camT:0,play:null,foul:null,lastSwingT:-9,relClock:null,
     seen:{},coinsEarned:0};
+  // batting practice: the user bats forever against the CPU, bases cleared after every plate appearance
+  if(practice){ G.practice={pa:0,h:0,hr:0,sweet:0,sw:0,best:0}; G.half='bot'; }
   const pk=pickPark(home,attract), park=buildPark(pk.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:pk.sub,color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
   G.sq={home:squadOf(hi,!attract),away:squadOf(ai,false)};
   if(li!=null&&!attract) G.sq.home.cap=clamp(li,0,G.sq.home.girls.length-1);
@@ -2747,6 +2749,7 @@ function newGame(hi,ai,li,diff,attract){
   const target=hr+1+(diff!=='rookie'&&rnd()<.5?1:0), ar=[0,0,0,0,0,0];
   for(let k=0;k<target;k++) ar[Math.floor(rnd()*6)]++;
   G.line.away=ar; G.score.home=hr; G.score.away=target;
+  if(practice){ G.line={home:[0,0,0,0,0,0,0],away:[0,0,0,0,0,0,0]}; G.score.home=G.score.away=0; }
   G.hits.home=hr+2+Math.floor(rnd()*4); G.hits.away=target+2+Math.floor(rnd()*4);
   placeFlags(home);
   CHEER_OUTFIT=park.kind==='dome'||rnd()<.35?'battle':'jersey';  // big nights get the battle tops
@@ -2757,7 +2760,8 @@ function newGame(hi,ai,li,diff,attract){
   drawAds(null);
   resetPositions();
   setMarquee(attract?'熱血應援棒球　FEVER BASEBALL　·　台灣職棒夜場　·　一起逆轉！':`${away.city}${away.name}　VS　${home.city}${home.name}　·　第七局開打！`);
-  if(!attract) after(300,()=>startHalf());
+  if(practice){ setMarquee(`打擊練習　${home.city}${home.name}　·　無限打席，想打多久就打多久`); after(300,()=>{ popup('打擊練習',{sub:'無限打席・按右上 ⚙ 結束',color:'#FFD54A',size:60,dur:1600}); after(1700,startPA); }); }
+  else if(!attract) after(300,()=>startHalf());
 }
 function buildSquads(home,away){
   if(S3.squads) S3.squadRoot.remove(...S3.squadRoot.children);
@@ -2849,8 +2853,9 @@ function startPA(){
   const lines=G.chance?chanceLyrics(b,t):(b.lyrics||[b.chant]), chant=lines.join('　');
   G.lyrics=lines; G.lyricIdx=2;
   setMarquee(chant); setMood('idle');
-  const introDur=FAST()?(first?900:350):(first||b.star?1700:1300);
+  const introDur=G.practice?(first?900:450):FAST()?(first?900:350):(first||b.star?1700:1300);
   startCut('intro',introDur,{p:b,f:G.batterFig},()=>{
+    if(user&&G.practice) return nextPitch();
     if(user){ startCut('cheer',FAST()?2000:4200,{side,p:b,chant,lines,chance:G.chance},()=>nextPitch()); sfx('jingle'); G.lastKBar=-1; G.kBars=0; }
     else { G.lastDefChant=-9e9; nextPitch(); }
   });
@@ -2862,7 +2867,7 @@ function nextPitch(){
 
   if(userBatting()){
     const T=G.away, p=T.pitcher;
-    if(fatigue(p)>.65&&T.pen.length){ const lead=G.score.away-G.score.home; const pick2=(G.inning>=9&&lead>=1&&lead<=3&&T.pen.includes(3))?3:T.pen.find(i=>i!==3)||T.pen[0]; return pitchChange(T,'away',pick2,nextPitch); }
+    if(!G.practice&&fatigue(p)>.65&&T.pen.length){ const lead=G.score.away-G.score.home; const pick2=(G.inning>=9&&lead>=1&&lead<=3&&T.pen.includes(3))?3:T.pen.find(i=>i!==3)||T.pen[0]; return pitchChange(T,'away',pick2,nextPitch); }
     G.phase='windup'; G.t=0; G.windDur=900+rnd()*450; G.pitch=cpuPitch();
   }else{ G.phase='choose'; G.t=0; G.penOpen=false; }
 }
@@ -3042,7 +3047,7 @@ function userSwing(){
   setMode(G.batterFig,'swing',0.02); sfx('whoosh');
   const P=G.pitch;
   if(G.phase!=='flight'||!P||P.swung) return;
-  P.swung=true;
+  P.swung=true; if(G.practice) G.practice.sw++;
   const TW=timingWindow(), dt=P.t+SWING_LEAD-P.dur;
   if(Math.abs(dt)>TW){ G.fb={txt:dt<0?'太早了！':'太晚了！',c:'#FF8A8A',t:0}; return; }
   const C=batContact(P);
@@ -3141,6 +3146,7 @@ function missedDive(tr,skip){
   return best;
 }
 function startPlay(EV,L,spray,p0,q){
+  if(G.practice&&userBatting()) G.practice.best=Math.max(G.practice.best,Math.round(EV*1.609));
   EV=Math.min(EV,118);
   const tr=simulate(EV,L,spray,p0), bat=curBatter(), rs=runSpeed(bat), F=G.fielders, ob=G.outs;
   let ev=fieldEvent(tr);
@@ -3305,7 +3311,7 @@ function resolveOutcome(r){
 }
 function showOutcome(o){
   let sub='';
-  if(o.runs) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
+  if(o.runs&&!G.practice) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
   popup(o.text,{sub,color:o.color,size:o.size,dur:1600,y:330});
   if(userBatting()){
     if(o.res==='HR'){ G.fwT=3; sfx('roar'); setMarquee(`全壘打！全壘打！　${curBatter().name}！　${G.home.call}`); leaderShout(fillT(SHOUT_T.hr,{n:curBatter().short}),true); }
@@ -3319,6 +3325,7 @@ function showOutcome(o){
 function commitOutcome(o){
   const user=userBatting(), b=curBatter(), side=batSide(), d0=G.score.home-G.score.away;
   G.outs+=o.outs; G.bases=o.nb; G.runners=o.nr;
+  if(G.practice){ const S=G.practice; S.pa++; if(o.hit) S.h++; if(o.res==='HR') S.hr++; return; }
   G.score[side]+=o.runs; G.line[side][G.inning-1]+=o.runs;
   if(o.hit) G.hits[side]++;
   if(o.res!=='BB') b.ab++;
@@ -3361,6 +3368,7 @@ function impact(p0,q,res,user){
   const big=q>.82, good=q>.6;
   G.hitStop=big?170:good?90:40; G.slow=good?{t:0,dur:res==='HR'?1400:big?800:420}:null;
   if(big&&user) missionEvent('perfect');
+  if(big&&user&&G.practice) G.practice.sweet++;
   if(big&&user){ G.flash=Math.max(G.flash||0,.55); G.punch=1; G.speedLines={t:0,x:G.batHit?G.batHit.x:ZC.x,y:G.batHit?G.batHit.y:ZC.y}; sfx('ping'); }
   G.shake=(big?0.22:good?0.12:0.05)*(user?1:.6);
   S3.ring.position.copy(p0); S3.ring.visible=true; S3.ringT=0;
@@ -3382,6 +3390,7 @@ function afterPlay(o){
   }else after(900,()=>{ G.camMode='bat'; resetPositions(); nextPA(); });
 }
 function nextPA(){
+  if(G.practice){ G.outs=0; G.bases=[0,0,0]; G.runners=[null,null,null]; batTeam().idx++; resetPositions(); return startPA(); }
   if(G.half==='bot'&&G.inning>=9&&G.score.home>G.score.away) return gameOver(true);
   batTeam().idx++;
   if(G.outs>=3) return endHalf();
@@ -4503,10 +4512,19 @@ function penRows(){ const T=fieldTeam(); return T.pen.map((idx,k)=>({idx,p:T.pit
 function inRect(p,r){ return p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h; }
 function suggestCloser(){ if(userBatting()||G.attract) return false; const T=G.home, lead=G.score.home-G.score.away; return G.inning>=9&&lead>=1&&lead<=3&&T.pitcher.role!=='CL'&&T.pen.includes(3); }
 
+// batting practice keeps its own tally where the line score would be
+function practiceStats(){ const S=G.practice; return {S,sw:S.sw?Math.round(S.sweet/S.sw*100):0}; }
+function drawPracticeBoard(){
+  const {S,sw}=practiceStats();
+  txt('打擊練習',22,26,17,'#FFD54A',{a:'left'});
+  txt(`打席 ${S.pa}　安打 ${S.h}　全壘打 ${S.hr}`,22,54,16,'#fff',{a:'left',w:700});
+  txt(`甜蜜點 ${sw}%　最快初速 ${S.best?S.best+' km/h':'—'}`,22,80,14,'#B8BBE6',{a:'left',w:700});
+}
 function drawScoreboard(){
   if(HUD_KIND==='field'||LAYOUT.tall) return;
   ctx.fillStyle='#07081A'; ctx.fillRect(0,0,W,FT);
   ctx.fillStyle='#14183A'; ctx.fillRect(0,FT-3,W,3);
+  if(G.practice) drawPracticeBoard(); else {
   const n=Math.max(9,G.inning), x0=82, cw=Math.min(24,238/n);
   for(let k=0;k<n;k++) txt(String(k+1),x0+cw*k+cw/2,20,12,'#7A7EAE',{d:1,w:400});
   txt('R',x0+cw*n+16,20,12,'#7A7EAE',{d:1,w:400}); txt('H',x0+cw*n+42,20,12,'#7A7EAE',{d:1,w:400});
@@ -4519,6 +4537,7 @@ function drawScoreboard(){
     txt(String(G.score[s]),x0+cw*n+16,y,19,'#FFB23F',{d:1,w:400});
     txt(String(G.hits[s]),x0+cw*n+42,y,15,'#B8BBE6',{d:1,w:400});
   });
+  }
   const bx=356;
   [['B',G.balls,3,'#5CE87A',30],['S',G.strikes,2,'#FFD21F',54],['O',G.outs,2,'#FF5A5A',78]].forEach(([l,v,m,c,y])=>{
     txt(l,bx,y,14,'#7A7EAE',{d:1,w:400});
@@ -4901,6 +4920,7 @@ function drawLandControls(){
 function drawLandScore(x,y,s){
   ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
   ctx.fillStyle='rgba(7,8,26,.72)'; rr(0,0,236,70,12); ctx.fill();
+  if(G.practice){ const {S,sw}=practiceStats(); txt('打擊練習',10,14,12,'#FFD54A',{a:'left'}); txt(`安打 ${S.h}/${S.pa}`,10,36,15,'#fff',{a:'left',w:700}); txt(`HR ${S.hr}・甜蜜 ${sw}%`,10,57,13,'#B8BBE6',{a:'left',w:700}); } else
   [['away',20],['home',50]].forEach(([sd,yy])=>{ const T=G[sd], bat=batSide()===sd;
     ctx.fillStyle=T.hud; ctx.fillRect(8,yy-10,4,20);
     txt(T.name,18,yy,16,'#fff',{a:'left'});
@@ -5555,6 +5575,10 @@ $('missClose').onclick=()=>{ $('missPanel').hidden=true; };
 $('howBtn').onclick=()=>{ const h=$('howPanel'); h.hidden=!h.hidden; $('scrTitle').classList.toggle('howOpen',!h.hidden); paginate($('howList')); };
 $('goTeam').onclick=()=>{ audioInit(); renderTeams(); show('scrTeam'); };
 $('goCards').onclick=()=>{ audioInit(); openCards(); };
+// a short note over the menus (e.g. the practice tally when leaving practice)
+function toast(msg){ let d=$('toast'); if(!d){ d=document.createElement('div'); d.id='toast'; d.style.cssText='position:absolute;left:50%;bottom:calc(var(--u)*120);transform:translateX(-50%);max-width:90%;padding:calc(var(--u)*12) calc(var(--u)*18);border-radius:calc(var(--u)*14);background:rgba(7,8,26,.92);color:#FFD54A;font-weight:800;font-size:calc(var(--fu)*16);text-align:center;z-index:50;pointer-events:none;transition:opacity .5s'; $('stage').appendChild(d); }
+  d.textContent=msg; d.style.opacity='1'; clearTimeout(d._t); d._t=setTimeout(()=>d.style.opacity='0',4200); }
+$('goPractice').onclick=()=>{ audioInit(); let opp; do{ opp=Math.floor(rnd()*TEAMS.length); }while(opp===pickTeam); show(null); newGame(pickTeam,opp,LEADER_PICK,pickDiff,false,true); voicePacksForGame(); };
 $('backTitle').onclick=()=>show('scrTitle');
 $('backTeam').onclick=()=>show('scrTeam');
 $('editTeam').onclick=()=>openEditor(pickTeam);
@@ -5581,7 +5605,7 @@ function renderSettings(){
   [['setSound','sound'],['setVoice','voice'],['setAssist','assist'],['setFast','fast']].forEach(([id,k])=>{ $(id).textContent=s[k]?'開':'關'; $(id).classList.toggle('sel',s[k]); });
   $('setMusic').value=s.music;
   $('setFull').textContent=document.fullscreenElement||document.webkitFullscreenElement?'離開全螢幕':'進入全螢幕';
-  $('setQuit').hidden=!G||G.attract||G.over;
+  $('setQuit').hidden=!G||G.attract||G.over; $('setQuit').textContent=G&&G.practice?'結束練習回標題':'結束比賽回標題';
 }
 function openSettings(){ audioInit(); pickVoice(); setTimeout(()=>{ if($('scrSet').hidden) return; if(VOICE.none&&!$('setNote').textContent) $('setNote').textContent='這台裝置沒有台灣中文語音，還沒錄好的團長喊聲會改用字幕顯示。'; },60); if(G&&!G.attract) G.paused=true; try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} $('setNote').textContent=''; renderSettings(); $('scrSet').hidden=false; paginate($('setList'),true); }
 function closeSettings(){ $('scrSet').hidden=true; if(G) G.paused=false; }
@@ -5628,7 +5652,7 @@ $('setFast').onclick=()=>{ SAVE.settings.fast=!SAVE.settings.fast; persist(); re
 $('setAssist').onclick=()=>{ SAVE.settings.assist=!SAVE.settings.assist; persist(); renderSettings(); };
 $('setMusic').oninput=e=>{ SAVE.settings.music=+e.target.value; persist(); };
 $('setClose').onclick=closeSettings;
-$('setQuit').onclick=()=>{ closeSettings(); startAttract(); show('scrTitle'); };
+$('setQuit').onclick=()=>{ const pr=G&&G.practice; closeSettings(); if(pr&&pr.pa){ const S=pr; toast(`練習成果：${S.pa} 打席 ${S.h} 安打 ${S.hr} 全壘打・甜蜜點 ${S.sw?Math.round(S.sweet/S.sw*100):0}%`); } startAttract(); show('scrTitle'); };
 function showOver(){
   setTimeout(()=>{ if(SAVE.streak>1) $('ovCoins').textContent+=`　連勝 ${SAVE.streak} 場${G.streakBonus?` 獎勵 +${G.streakBonus}`:''}`; },0);
   const h=G.score.home,a=G.score.away, win=h>a;
@@ -5906,7 +5930,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011015111', box=document.getElementById('upd');
+  const BUILD='20261011015409', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
