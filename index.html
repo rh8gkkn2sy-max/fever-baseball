@@ -199,7 +199,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.3（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.4（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -221,7 +221,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.3（2026.10.10）</div>
+    <div class="ver">版本 2.4（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1817,6 +1817,20 @@ function capTex(T,kit){
   const t=canvasTex(c); texCache[key]=t; return t;
 }
 /* ---------- baseball player ---------- */
+// faces: brows, eyes and mouth reshape for an emotion
+const FACES={
+  neutral:{by:0.19,br:0.12,ey:0.7,mx:1,my:1,mo:0.105},
+  happy:{by:0.197,br:0.05,ey:0.38,mx:1.8,my:3,mo:0.1},
+  shout:{by:0.2,br:-0.05,ey:0.85,mx:1.35,my:5.5,mo:0.094},
+  angry:{by:0.181,br:-0.5,ey:0.42,mx:1.25,my:1.3,mo:0.1},
+  sad:{by:0.186,br:0.5,ey:0.5,mx:0.75,my:1,mo:0.098},
+};
+function setFace(f,e){
+  if(!f||!f.face||f.face.cur===e) return; const F=FACES[e]||FACES.neutral; f.face.cur=e;
+  f.face.brows.forEach(b=>{ b.position.y=F.by; b.rotation.z=-b.userData.s*F.br; });
+  f.face.eyes.forEach(m=>m.scale.y=F.ey); f.face.iris.forEach(m=>m.scale.y=Math.max(0.4,F.ey/0.7));
+  f.face.mouth.scale.set(F.mx,F.my,1); f.face.mouth.position.y=F.mo;
+}
 function makePlayer(p,T,kitSide,opt){
   opt=opt||{};
   const kit=T[kitSide], lk=p.look, f=makeRig(L_PLAYER), sh=true;
@@ -1830,15 +1844,16 @@ function makePlayer(p,T,kitSide,opt){
   mesh(GEO.belt,M(kit.cap),f.hips,0,0.09,0,false).scale.set(w,1,w*.92);
   mesh(GEO.neck,skin,f.head,0,0.02,0,sh);
   const face=mesh(GEO.head,skin,f.head,0,0.15,0,sh); face.scale.set(.96,1.06,1);
+  f.face={eyes:[],iris:[],brows:[],mouth:null,cur:'neutral'};
   [-1,1].forEach(s=>{
     mesh(GEO.ear,skin,f.head,s*0.11,0.15,0,false);
-    mesh(GEO.eyeW,M('#F4F4F4'),f.head,s*0.038,0.165,0.098,false).scale.set(1,.7,.5);
-    mesh(GEO.iris,M('#2A1C14'),f.head,s*0.038,0.165,0.106,false);
-    const br=mesh(GEO.brow,M(lk.hairC||'#1a1a1a'),f.head,s*0.038,0.19,0.104,false); br.rotation.z=-s*0.12;
+    f.face.eyes.push(mesh(GEO.eyeW,M('#F4F4F4'),f.head,s*0.038,0.165,0.098,false)); f.face.eyes[f.face.eyes.length-1].scale.set(1,.7,.5);
+    f.face.iris.push(mesh(GEO.iris,M('#2A1C14'),f.head,s*0.038,0.165,0.106,false));
+    const br=mesh(GEO.brow,M(lk.hairC||'#1a1a1a'),f.head,s*0.038,0.19,0.104,false); br.rotation.z=-s*0.12; br.userData.s=s; f.face.brows.push(br);
     if(lk.eyeBlack) mesh(GEO.eyeBlack,M('#111111'),f.head,s*0.04,0.137,0.108,false);
   });
   mesh(GEO.nose,skin,f.head,0,0.14,0.115,false).scale.set(1,1.3,1);
-  mesh(GEO.mouth,M('#7A3B32'),f.head,0,0.105,0.108,false);
+  f.face.mouth=mesh(GEO.mouth,M('#7A3B32'),f.head,0,0.105,0.108,false);
   const bc=lk.beardC||lk.hairC||'#1a1a1a';
   if(lk.beard==='full'){ const b=mesh(GEO.beardFull,M(bc,{roughness:1}),f.head,0,0.15,0.004,false); b.scale.set(1,1.08,1.05); mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.12,0.112,false); }
   if(lk.beard==='stubble'){ const b=mesh(GEO.beardFull,M(bc,{roughness:1,transparent:true,opacity:.42}),f.head,0,0.15,0.001,false); b.scale.set(.99,1.06,1.03); }
@@ -2171,6 +2186,12 @@ const DIVE=P({rx:1.38,lift:0.1,hy:0,sp:[0,0,0],hd:[-0.5,0,0],lh:[0.14,2.2,0.12],
 const LEAP=P({hy:-0.02,sp:[-0.22,0,0.12],hd:[-0.55,0,0.1],lh:[0.08,2.42,0.2],le:[0.42,1.9,0.15],rh:[-0.35,1.55,0.0],re:[-0.6,1.4,-0.2],lf:[0.12,0.58,0.22],lk:[0.15,1.0,1.4],rf:[-0.1,0.3,-0.35],rk:[-0.15,0.5,0.4]});
 // feet-first slide: leaning back on the hip, lead leg reaching for the bag, hands up out of the way
 const SLIDE_F=P({rx:-1.05,hy:-0.08,sp:[0.35,0,0.15],hd:[0.55,0,0],lf:[0.08,0.24,0.8],lk:[0.1,0.5,1.4],rf:[-0.2,0.12,0.18],rk:[-0.3,0.6,0.8],lh:[0.32,1.25,-0.25],rh:[-0.35,1.5,-0.1],le:[0.6,1.4,-0.3],re:[-0.6,1.6,-0.2]});
+// reactions after a strikeout
+const REACT={
+  pump:P({hy:-0.08,sp:[-0.1,0.25,0],hd:[-0.35,0.25,0],rh:[-0.18,1.98,0.32],re:[-0.62,1.5,0.1],lh:[0.24,1.1,0.25],le:[0.55,1.1,0.1],lf:[0.2,.08,0.05],rf:[-0.2,.08,-0.05]}),
+  helmet:P({hy:-0.04,sp:[0.18,0,0],hd:[0.3,0.2,0],rh:[-0.08,1.86,0.12],re:[-0.6,1.62,0.15],lh:[0.24,0.95,0.12],le:[0.5,1.1,-0.1]}),
+  slump:P({hy:-0.06,sp:[0.32,0,0],hd:[0.5,0,0],lh:[0.22,1.0,-0.06],rh:[-0.22,1.0,-0.06],le:[0.5,1.05,-0.32],re:[-0.5,1.05,-0.32]}),
+};
 const RECV=P({hy:-0.08,sp:[0.15,0,0],lh:[0.15,1.35,0.5],rh:[-0.15,1.3,0.45],le:[0.5,1.0,0.2],re:[-0.5,1.0,0.2],lf:[0.25,.08,0.1],rf:[-0.2,.08,-0.1]});
 // closer on the mound: fist to the sky
 const CL_POSE=P({hy:-0.02,sp:[-0.08,0,0],hd:[-0.25,0,0],lf:[0.16,.08,0.03],rf:[-0.16,.08,0.03],rh:[-0.22,2.12,0.1],re:[-0.6,1.6,-0.2],lh:[0.24,1.0,0.2],le:[0.6,1.1,0]});
@@ -2477,7 +2498,7 @@ function resetPositions(){
   placeRunners();
 }
 function placeBatter(){
-  const b=curBatter(), T=batTeam(), f=figFor(b,T,batSide(),'bat');
+  const b=curBatter(), T=batTeam(), f=figFor(b,T,batSide(),'bat'); setFace(f,'neutral');
   const left=b.bat==='L';
   const prev=G.batterFig;
   if(prev&&prev!==f&&!G.runners.includes(prev.p)) prev.root.visible=false;
@@ -2514,7 +2535,7 @@ function startHalf(){
   });
 }
 function startPA(){
-  applyZoom(zoomFor());
+  applyZoom(zoomFor()); if(G.fielders) setFace(G.fielders[0],'neutral');
   if(!G.attract&&G.home){ loadVoicePack('p-'+curBatter().id); loadVoicePack('p-'+curPitcher().id); }
   G.balls=0; G.strikes=0; G.skill=null; G.pitchInfo=null; G.relClock=null; G.camMode='bat'; G.fb=null;
   const b=curBatter(), t=batTeam(), user=userBatting(), side=batSide();
@@ -2804,7 +2825,9 @@ function startPlay(EV,L,spray,p0,q){
   // an outfielder at the wall can take a home run back
   if(tr.hr&&(!ev||ev.t>=tr.wallT)){
     const wp=trajAt(tr,tr.wallT);
-    if(wp.y<4.2) for(let k=5;k<8;k++){ const f=F[k]; if(Math.hypot(wp.x-f.home.x,wp.z-f.home.z)-1.2<=(tr.wallT-0.45)*FT_TUNE.o&&rnd()<.5){ ev={t:tr.wallT-0.02,k,p:wp.clone(),air:true,rob:true}; tr.hr=false; plan.hl={type:'rob',title:'沒收全壘打！'}; break; } }
+    // only a ball that barely clears the 3 m wall is within a leaping glove; it is caught at the wall, never beyond it
+    if(wp.y<3.45) for(let k=5;k<8;k++){ const f=F[k]; if(Math.hypot(wp.x-f.home.x,wp.z-f.home.z)-1.2<=(tr.wallT-0.45)*FT_TUNE.o&&rnd()<.35){
+      ev={t:tr.wallT-0.02,k,p:wp.clone(),air:true,rob:true}; tr.hr=false; tr.pts.length=Math.min(tr.pts.length,Math.ceil(tr.wallT/tr.dt)+1); plan.hl={type:'rob',title:'沒收全壘打！'}; break; } }
   }
   if(ev&&ev.air&&(!tr.hr||ev.t<tr.wallT)){
     res=L>48?'PO':L<20?'LO':'FO'; tr.hr=false;
@@ -2980,10 +3003,12 @@ function finishPA(o){
   if(o.res==='K'&&!userBatting()){
     const pn=curPitcher().name;
     setMarquee(`三振！三振！　${pn}　三振！　${G.home.call}`);
-    after(700,()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); leaderShout(fillT(pick(SHOUT_T.k),{pn:(curPitcher().short||pn)}),true); });
+    after(500,()=>{ const pf=G.fielders[0]; setFace(pf,'shout'); setFace(G.batterFig,rnd()<.5?'angry':'sad');
+      startCut('react',1200,{f:pf,pose:'pump'},()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); }); leaderShout(fillT(pick(SHOUT_T.k),{pn:(curPitcher().short||pn)}),true); });
     return;
   }
-  if(o.res==='K'&&userBatting()){ after(600,()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA)); return; }
+  if(o.res==='K'&&userBatting()){ const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
+    after(500,()=>startCut('react',1300,{f:G.batterFig,pose:mad?'helmet':'slump'},()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA))); return; }
   after(1600,nextPA);
 }
 // Contact feedback: hit-stop, slow motion, camera kick, sparks, shock ring, layered crack
@@ -3232,6 +3257,7 @@ function startTrot(pl,done){
   const nxt=T.lineup[(T.idx+1)%9]; if(nxt!==curBatter()) mates.push(figFor(nxt,T,side,'bat'));
   mates.forEach((f,i)=>{ const x=-1.6+i*1.1; placeFig(f,x,1.6,faceYaw(x,1.6,-6,-6)); f.from=null; f.spr=null; f.mode='mate'; });
   bf.root.visible=true; bf.root.position.set(0.3,0,0); setMode(bf,'trot',0.1);
+  setFace(bf,'shout');
   const pool=['fist','raise','fflip','bflip','chest','sky'], h=hashStr(bf.p.id); const acts=[pool[h%6],pool[(h>>3)%6],pool[(h>>6)%6]]; if(bf.p.star) acts[1]=h%2?'fflip':'bflip';
   G.trot={acts,act:null,t:0,fig:bf,path:[new V3(0.3,0,0),BASES[1].clone(),BASES[2].clone(),BASES[3].clone(),new V3(0,0,0.3)],seg:0,s:0,speed:FAST()?11:7.6,mates,done,arrive:null};
   G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0);
@@ -3357,7 +3383,8 @@ function updateFigures(dt){
   if(G.trot) trotFigures(dt);
   if(bf&&bf.root.visible&&!G.trot){
     const S=bf.bset; let p;
-    if(bf.mode==='run'){ bf.runPh=(bf.runPh||0)+dt*14; p=runPose(bf.runPh); }
+    if(G.cut&&G.cut.type==='react'&&G.cut.data.f===bf){ p=lp(S.stance,REACT[G.cut.data.pose],ease(Math.min(1,G.cut.t/300))); bf.noSpring=false; }
+    else if(bf.mode==='run'){ bf.runPh=(bf.runPh||0)+dt*14; p=runPose(bf.runPh); }
     else if(bf.mode==='slide') p=bf.slideHead?DIVE:SLIDE_F;
     else if(bf.mode==='lead') p=RLEAD;
     else if(bf.mode==='swing'){ p=sampleKeys(S.swing,bf.mt); if(bf.mt>1.1&&!G.play) setMode(bf,'stance',0.5); }
@@ -3433,6 +3460,7 @@ function fielderInPlay(f,i,pl,dt){
 }
 function pitcherPose(f){
   const left=f.p.throws==='L', K=left?PK_L:PK;
+  if(G.cut&&G.cut.type==='react'&&G.cut.data.f===f){ f.yaw=left?Math.PI/2:-Math.PI/2; const u=Math.min(1,G.cut.t/250); return lp(K[0][1],REACT[G.cut.data.pose],ease(u)); }
   if(G.show&&G.cut&&G.cut.type==='show'){
     const S=G.show, t=S.t/1000, big=S.big, walkA=big?2.2:0, walkB=big?6.2:1.2, to=new V3(0,0.25,-18.39);
     if(t<walkA){ f.root.visible=false; return K[0][1]; }
@@ -3533,7 +3561,7 @@ function updateBallVisual(){
   else if(G.phase==='windup'||G.phase==='choose'||G.phase==='aim'||G.phase==='gauge'){ const pf=G.fielders&&G.fielders[0]; if(pf){ p=new V3(); (pf.p.throws==='L'?pf.lHand:pf.rHand).getWorldPosition(p); } }
   if(!p||G.attract||G.phase==='cut'){ ball.visible=sh.visible=false; S3.trail.visible=false; return; }
   ball.visible=sh.visible=true; ball.position.copy(p);
-  const dc=cam.position.distanceTo(p); ball.scale.setScalar(Math.max(1.4,dc/7));
+  const dc=cam.position.distanceTo(p); ball.scale.setScalar(clamp(dc/12,1.1,2.3));
   ball.rotation.x+=0.6; ball.rotation.y+=0.2;
   sh.position.set(p.x,0.02,p.z); sh.scale.setScalar(Math.max(1,dc/8));
   if(G.play){
@@ -3592,10 +3620,10 @@ function updateCamera2(dt){
   L.face.intensity=0;
   if(G.phase==='cut'&&G.cut){
     const c=G.cut, u=c.t/c.dur;
-    if(c.type==='intro'){
+    if(c.type==='intro'||c.type==='react'){
       const f=c.data.f, h=headWorld(f), yaw=f.root.rotation.y;
       const fwd=new V3(Math.sin(yaw),0,Math.cos(yaw)), side=new V3(Math.cos(yaw),0,-Math.sin(yaw));
-      const dist=lerp(2.0,1.6,ease(u));
+      const dist=c.type==='react'?lerp(3.0,2.5,ease(u)):lerp(2.0,1.6,ease(u));
       cam.position.copy(h).addScaledVector(fwd,dist).addScaledVector(side,(f.p.bat==='L'?-1:1)*0.8).add(new V3(0,0.06,0));
       _cl.copy(h).add(new V3(0,-0.32,0)); cam.lookAt(_cl);
       L.face.position.copy(h).addScaledVector(fwd,1.2).add(new V3(0,0.4,0)); L.face.intensity=1.6;
@@ -3759,7 +3787,8 @@ const MODE_BTN_P={x:410,y:640,w:118,h:44};
 function modeBtn(){ return LAYOUT.land?LAYOUT.ctl.modeL:MODE_BTN_P; }
 function pitchSide(){ const bf=G.batterFig; return bf&&bf.p.bat==='L'?'left':'right'; }
 function pitchCardRect(i){ const x=LAYOUT.land?LAYOUT.ctl.cardX:pitchSide()==='right'?ZONE.x+ZONE.w+14:ZONE.x-14-150; return {x,y:(LAYOUT.land?FT+165:ZONE.y-30)+i*68,w:150,h:62}; }
-function penRect(){ const n=(curPitcher().arsenal||PT_KEYS).length, a=pitchBtn(0), b=pitchBtn(Math.min(1,n-1)), last=pitchBtn(n-1), x0=Math.min(a.x,b.x)-a.r, x1=Math.max(a.x,b.x)+a.r; return {x:x0,y:last.y+last.r+30,w:x1-x0,h:38}; }
+function penRect(){ if(LAYOUT.tall){ const b=pitchBtn((curPitcher().arsenal||PT_KEYS).length-1); return {x:b.x+b.r-150,y:b.y-b.r-52,w:150,h:38}; }
+  const n=(curPitcher().arsenal||PT_KEYS).length, a=pitchBtn(0), b=pitchBtn(Math.min(1,n-1)), last=pitchBtn(n-1), x0=Math.min(a.x,b.x)-a.r, x1=Math.max(a.x,b.x)+a.r; return {x:x0,y:last.y+last.r+30,w:x1-x0,h:38}; }
 function pitchSpeedEst(p,t){ return Math.round(p.velo+PT[t].d-1-fatigue(p)*7); }
 function penRows(){ const T=fieldTeam(); return T.pen.map((idx,k)=>({idx,p:T.pitchers[idx],x:40,y:250+k*84,w:460,h:72})); }
 function inRect(p,r){ return p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h; }
@@ -4548,7 +4577,9 @@ function pitchUI(){ return G&&!G.attract&&!userBatting()&&['choose','aim','gauge
 function joyTarget(){ return userBatting()?G.cursor:G.aim; }
 function pitchBtn(i){
   if(LAYOUT.land) return LAYOUT.ctl.pb(i);
-  const n=(curPitcher().arsenal||PT_KEYS).length, right=pitchSide()==='right', room=right?W-(ZONE.x+ZONE.w)-12:ZONE.x-12;
+  // portrait with a joystick: a row along the bottom right, under the zone, for the right thumb
+  if(LAYOUT.tall){ const n=(curPitcher().arsenal||PT_KEYS).length, r=34; return {x:W-14-r-(n-1-i)*(2*r+14),y:FB-r-30,r}; }
+  const n=(curPitcher().arsenal||PT_KEYS).length, right=LAYOUT.tall?true:pitchSide()==='right', room=right?W-(ZONE.x+ZONE.w)-12:ZONE.x-12;
   const two=room>=2*(2*40)+24, r=two?40:clamp((room-16)/2,30,38), cols=two?2:1, rows=Math.ceil(n/cols), step=2*r+30;
   const top=Math.min(Math.max(ZC.y-(rows*step-30)/2+r-10,224+r),FB-rows*step), col=i%cols, row=Math.floor(i/cols);
   const x0=right?ZONE.x+ZONE.w+12+room/2-(cols-1)*(r+6):ZONE.x-12-room/2+(cols-1)*(r+6);
@@ -5087,7 +5118,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010105942', box=document.getElementById('upd');
+  const BUILD='20261010113354', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
