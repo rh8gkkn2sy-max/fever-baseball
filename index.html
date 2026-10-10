@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.30（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.31（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.30（2026.10.11）</div>
+    <div class="ver">版本 2.31（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2558,19 +2558,23 @@ function pitchKeys(p){
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
 function batPose(o){ const g=o.g, d=o.bd, n=Math.hypot(d[0],d[1],d[2]);
   o.lh=[g[0],g[1],g[2]]; o.rh=[g[0]+d[0]/n*0.09,g[1]+d[1]/n*0.09,g[2]+d[2]/n*0.09]; return P(o); }
-const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.3,1.4,0.212],bd:[-0.305,0.83,-0.466],le:[-0.171,1.313,0.541],re:[-0.686,1.397,0.043],hd:[0,1.25,0.08]};
+// The stance is solved, not eyeballed (qa/www/grip.js): the bat at least 15 cm off the helmet and 12 cm off the chest,
+// both arms at least 6 cm off the throat and chin, the front elbow 15 cm or more below the front shoulder (the forearm
+// rises across the chest to the hands, it does not run across the neck), the back elbow out at shoulder height,
+// hands up by the back shoulder and the bat tipped back toward the catcher over it.
+const BASE_STANCE={hy:-0.12,sp:[0.26,0,0],hr:[0,-0.12,0],lf:[0.36,.08,0.02],rf:[-0.36,.08,0],lk:[0.55,0.5,1.0],rk:[-0.55,0.5,1.0],g:[-0.282,1.33,0.271],bd:[-0.318,0.846,-0.427],le:[0.116,1.171,0.24],re:[-0.744,1.178,0.147],hd:[0,1.25,0.08]};
 const STANCE_MOD={
   std:{},
-  open:{hr:[0,0.22,0],lf:[0.3,.08,-0.2],hd:[0,1.0,0.08]},
-  crouch:{hy:-0.24,sp:[0.42,0,0],g:[-0.34,1.3,0.3],bd:[-0.417,0.836,-0.356],le:[0.086,1.195,0.67],re:[-0.445,1.12,-0.197]},
-  high:{g:[-0.3,1.576,0.203],bd:[-0.315,0.838,-0.445],hy:-0.08,le:[0.12,1.3,0.45],re:[-0.54,1.23,-0.133]},
+  open:{hr:[0,0.22,0],lf:[0.3,.08,-0.2],hd:[0,1.0,0.08],g:[-0.229,1.3,0.197],bd:[-0.332,0.832,-0.444],le:[0.06,1.165,0.265],re:[-0.412,1.378,0.114]},
+  crouch:{hy:-0.24,sp:[0.26,0,0],g:[-0.282,1.22,0.231],bd:[-0.318,0.846,-0.427],le:[0.116,1.061,0.2],re:[-0.744,1.068,0.107]},
+  high:{g:[-0.282,1.4,0.231],bd:[-0.318,0.846,-0.427],hy:-0.08,le:[0.116,1.241,0.2],re:[-0.744,1.248,0.107]},
   kick:{hy:-0.1,lf:[0.3,.08,0.02]},
 };
 function batterSet(stance,left){
   const m=STANCE_MOD[stance]||{}, g0=m.g||BASE_STANCE.g;
   const st=batPose(Object.assign({},BASE_STANCE,m));
   const ld=batPose(Object.assign({},BASE_STANCE,m,{hx:-0.05,sp:[(m.sp||BASE_STANCE.sp)[0],-0.15,0],hr:[0,-0.32,0],lf:stance==='kick'?[0.18,0.5,0.12]:[0.28,0.17,0.0],lk:[0.6,0.9,1.0],g:[g0[0]-0.1,g0[1]+0.03,g0[2]-0.04],bd:[-0.45,0.88,-0.15]}));
-  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[-0.3,1.38,0.27],bd:[-0.5,0.82,-0.2],re:[-0.6,1.36,-0.18]}));
+  const sd=batPose(Object.assign({},BASE_STANCE,m,{hx:0.02,hy:-0.17,sp:[0.27,-0.15,0],hr:[0,-0.3,0],lf:[0.6,.08,0.03],lk:[0.8,0.5,1.0],g:[g0[0]-0.01,g0[1]-0.02,g0[2]],bd:[-0.4,0.84,-0.36],le:m.le||BASE_STANCE.le,re:m.re||BASE_STANCE.re}));
   const sw=[
     [0.000,sd],
     [0.022,batPose({hx:0.06,hy:-0.21,sp:[0.25,0.12,0],hr:[0,0.6,0],lf:[0.6,.08,0.03],rf:[-0.36,0.1,0.02],lk:[0.8,0.5,1.0],rk:[0,0.5,1.0],g:[-0.12,1.12,0.4],bd:[-0.78,0.28,0.56],le:[0.4,0.85,0.75],re:[-0.2,0.78,0.38],hd:[0,1.15,0.1]})],
@@ -2881,7 +2885,7 @@ function newGame(hi,ai,li,diff,attract,practice){
     clock:0,beatPos:0,bpm:132,camMode:attract?'orbit':'fly',camT:0,play:null,foul:null,lastSwingT:-9,relClock:null,
     seen:{},coinsEarned:0};
   // batting practice: the user bats forever against the CPU, bases cleared after every plate appearance
-  if(practice){ G.practice={pa:0,h:0,hr:0,sweet:0,sw:0,best:0}; G.half='bot'; }
+  if(practice){ G.practice={pa:0,hr:0,far:0,sweet:0,sw:0,best:0}; G.half='bot'; }
   const pk=pickPark(home,attract), park=buildPark(pk.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:pk.sub,color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
   G.sq={home:squadOf(hi,!attract),away:squadOf(ai,false)};
   if(li!=null&&!attract) G.sq.home.cap=clamp(li,0,G.sq.home.girls.length-1);
@@ -3364,7 +3368,10 @@ function startPlay(EV,L,spray,p0,q){
   if(ev&&ev.rob) plan.hl={type:'rob',title:'沒收全壘打！'};
   if(res==='HR') plan.hl={type:'hr',title:'全壘打！'};
   const r=Object.assign({res,EV,L,spray,dist:tr.hr?hrDistance(EV,L,spray):(tr.landing?Math.hypot(tr.landing.x,tr.landing.z):0),ev},extra);
-  const oc=resolveOutcome(r);
+  let oc=resolveOutcome(r);
+  if(G.practice){ const carry=Math.round(r.dist||0), apex=Math.round(Math.max(...tr.pts.map(p=>p.y))*10)/10, prac={carry,apex,L:Math.round(L)};
+    if(res==='HR') oc.prac=prac;
+    else { res='PR'; r.res='PR'; oc={r,res:'PR',moves:[],outs:0,runs:0,text:L<8?`滾地 ${carry} 公尺`:`飛行 ${carry} 公尺`,color:carry>=90?'#FFD54A':'#9FE3FF',size:52,nb:[0,0,0],nr:[null,null,null],hit:false,hl:null,prac}; } }
   const runners=[];
   oc.moves.forEach(m=>{
     const fig=m.from===0?G.batterFig:G.runnerFigs[m.from-1]; if(!fig) return;
@@ -3464,6 +3471,7 @@ function showOutcome(o){
     else if(o.res==='DP') vbFlash('雙殺！','DOUBLE PLAY',fieldTeamHud(),'out');
     else if(o.runs) vbFlash('得分！',sub,hc,'hit'); }
   let sub='';
+  if(G.practice&&o.prac) sub=`最高 ${o.prac.apex} 公尺・仰角 ${o.prac.L}°`;
   if(o.runs&&!G.practice) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
   popup(o.text,{sub,color:o.color,size:o.size,dur:1600,y:330});
   if(userBatting()){
@@ -3480,7 +3488,7 @@ function fieldTeamHud(){ return (batSide()==='home'?G.away:G.home).hud; }
 function commitOutcome(o){
   const user=userBatting(), b=curBatter(), side=batSide(), d0=G.score.home-G.score.away;
   G.outs+=o.outs; G.bases=o.nb; G.runners=o.nr;
-  if(G.practice){ const S=G.practice; S.pa++; if(o.hit) S.h++; if(o.res==='HR') S.hr++; return; }
+  if(G.practice){ const S=G.practice; S.pa++; if(o.res==='HR') S.hr++; if(o.prac) S.far=Math.max(S.far||0,o.prac.carry); return; }
   G.score[side]+=o.runs; G.line[side][G.inning-1]+=o.runs;
   if(o.hit) G.hits[side]++;
   if(o.res!=='BB') b.ab++;
@@ -4715,7 +4723,7 @@ function practiceStats(){ const S=G.practice; return {S,sw:S.sw?Math.round(S.swe
 function drawPracticeBoard(){
   const {S,sw}=practiceStats();
   txt('打擊練習',22,26,17,'#FFD54A',{a:'left'});
-  txt(`打席 ${S.pa}　安打 ${S.h}　全壘打 ${S.hr}`,22,54,16,'#fff',{a:'left',w:700});
+  txt(`打席 ${S.pa}　全壘打 ${S.hr}　最遠 ${S.far||0} 公尺`,22,54,16,'#fff',{a:'left',w:700});
   txt(`甜蜜點 ${sw}%　最快初速 ${S.best?S.best+' km/h':'—'}`,22,80,14,'#B8BBE6',{a:'left',w:700});
 }
 function drawScoreboard(){
@@ -4836,6 +4844,7 @@ function drawFieldHud(){
     txt(`初速 ${Math.round(r.EV*1.609)} km/h`,26,FT+30,15,'#fff',{a:'left',w:700});
     txt(`仰角 ${Math.round(r.L)}°`,26,FT+52,15,'#fff',{a:'left',w:700});
     txt(`距離 ${d} 公尺`,26,FT+74,15,'#FFB23F',{a:'left',w:700});
+    if(G.practice){ ctx.fillStyle='rgba(7,8,26,.8)'; rr(14,FT+90,182,28,8); ctx.fill(); txt(`高度 ${Math.max(0,G.play.ballPos.y).toFixed(1)} 公尺`,26,FT+104,15,'#9FE3FF',{a:'left',w:700}); }
   }
   if(G.phase==='lucky') drawLucky();
   ctx.restore();
@@ -5118,7 +5127,7 @@ function drawLandControls(){
 function drawLandScore(x,y,s){
   ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
   ctx.fillStyle='rgba(7,8,26,.72)'; rr(0,0,236,70,12); ctx.fill();
-  if(G.practice){ const {S,sw}=practiceStats(); txt('打擊練習',10,14,12,'#FFD54A',{a:'left'}); txt(`安打 ${S.h}/${S.pa}`,10,36,15,'#fff',{a:'left',w:700}); txt(`HR ${S.hr}・甜蜜 ${sw}%`,10,57,13,'#B8BBE6',{a:'left',w:700}); } else
+  if(G.practice){ const {S,sw}=practiceStats(); txt('打擊練習',10,14,12,'#FFD54A',{a:'left'}); txt(`最遠 ${S.far||0}m・${S.pa}打席`,10,36,15,'#fff',{a:'left',w:700}); txt(`HR ${S.hr}・甜蜜 ${sw}%`,10,57,13,'#B8BBE6',{a:'left',w:700}); } else
   [['away',20],['home',50]].forEach(([sd,yy])=>{ const T=G[sd], bat=batSide()===sd;
     ctx.fillStyle=T.hud; ctx.fillRect(8,yy-10,4,20);
     txt(T.name,18,yy,16,'#fff',{a:'left'});
@@ -5873,7 +5882,7 @@ $('setFast').onclick=()=>{ SAVE.settings.fast=!SAVE.settings.fast; persist(); re
 $('setAssist').onclick=()=>{ SAVE.settings.assist=!SAVE.settings.assist; persist(); renderSettings(); };
 $('setMusic').oninput=e=>{ SAVE.settings.music=+e.target.value; persist(); };
 $('setClose').onclick=closeSettings;
-$('setQuit').onclick=()=>{ const pr=G&&G.practice; closeSettings(); if(pr&&pr.pa){ const S=pr; toast(`練習成果：${S.pa} 打席 ${S.h} 安打 ${S.hr} 全壘打・甜蜜點 ${S.sw?Math.round(S.sweet/S.sw*100):0}%`); } startAttract(); show('scrTitle'); };
+$('setQuit').onclick=()=>{ const pr=G&&G.practice; closeSettings(); if(pr&&pr.pa){ const S=pr; toast(`練習成果：${S.pa} 打席 ${S.hr} 全壘打・最遠 ${S.far||0} 公尺・甜蜜點 ${S.sw?Math.round(S.sweet/S.sw*100):0}%`); } startAttract(); show('scrTitle'); };
 function showOver(){
   setTimeout(()=>{ if(SAVE.streak>1) $('ovCoins').textContent+=`　連勝 ${SAVE.streak} 場${G.streakBonus?` 獎勵 +${G.streakBonus}`:''}`; },0);
   const h=G.score.home,a=G.score.away, win=h>a;
@@ -6152,7 +6161,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011024848', box=document.getElementById('upd');
+  const BUILD='20261011025710', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
