@@ -196,9 +196,10 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>存檔備份<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">匯出到「檔案」可存 iCloud／Google Drive</small></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="setExport">匯出</button><button class="pill" id="setImport">匯入</button></span></div>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <div class="setrow"><span>新手教學</span><button class="pill" id="setTut">重新開始</button></div>
+    <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.2（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.3（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -220,7 +221,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.2（2026.10.10）</div>
+    <div class="ver">版本 2.3（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1234,6 +1235,23 @@ if(renderer){
   const d=document.createElement('div'); d.className='nogl'; d.textContent='這個瀏覽器無法啟用 WebGL，請改用最新版 Chrome、Edge 或 Safari 開啟。'; stageEl.appendChild(d);
 }
 let scale=1,dpr=1,cssW=360,cssH=640;
+// quality tiers: auto mode steps down when frames run long (phones heating up) and back up when there is headroom
+const QUAL_TIERS=[{pr:1.75,shadow:true,map:2048},{pr:1.35,shadow:true,map:1024},{pr:1.0,shadow:false,map:1024}];
+const QUAL={tier:0,ema:16,slowT:0,fastT:0,lastChange:0};
+function applyQuality(t){
+  t=clamp(t,0,2); if(t===QUAL.tier&&QUAL.applied) return; QUAL.tier=t; QUAL.applied=true; QUAL.lastChange=performance.now(); const T=QUAL_TIERS[t];
+  if(!renderer) return; renderer.setPixelRatio(Math.min(dpr,T.pr)); renderer.setSize(cssW,cssH,false); renderer.shadowMap.enabled=T.shadow;
+  const key=S3.lights&&S3.lights.key; if(key&&key.shadow.mapSize.x!==T.map){ key.shadow.mapSize.set(T.map,T.map); if(key.shadow.map){ key.shadow.map.dispose(); key.shadow.map=null; } }
+}
+function qualityTick(dt){
+  const mode=(SAVE.settings&&SAVE.settings.quality)||'auto';
+  if(mode==='high'){ applyQuality(0); return; } if(mode==='low'){ applyQuality(2); return; }
+  if(document.hidden||dt>200) return;
+  QUAL.ema=QUAL.ema*0.94+dt*0.06; const now=performance.now(); if(now-QUAL.lastChange<6000) return;
+  if(QUAL.ema>23){ QUAL.slowT+=dt; QUAL.fastT=0; if(QUAL.slowT>2000&&QUAL.tier<2){ applyQuality(QUAL.tier+1); QUAL.slowT=0; } }
+  else if(QUAL.ema<13){ QUAL.fastT+=dt; QUAL.slowT=0; if(QUAL.fastT>12000&&QUAL.tier>0){ applyQuality(QUAL.tier-1); QUAL.fastT=0; } }
+  else { QUAL.slowT=0; QUAL.fastT=0; }
+}
 let LAYOUT={land:false,regions:[]};
 function resize(){
   const wrap=document.getElementById('wrap');
@@ -1293,7 +1311,7 @@ function resize(){
   hud.width=Math.round(w*dpr); hud.height=Math.round(h*dpr);
   cssW=w; cssH=h; scale=LAYOUT.regions[LAYOUT.regions.length-1].s;
   if(window.ZOOM_READY) applyZoom(zoomFor());
-  if(renderer){ renderer.setPixelRatio(Math.min(dpr,1.75)); renderer.setSize(w,h,false); }
+  if(renderer){ renderer.setPixelRatio(Math.min(dpr,QUAL_TIERS[QUAL.tier].pr)); renderer.setSize(w,h,false); }
 }
 // where a rectangle of the portrait layout lands on screen, in CSS pixels
 const FX=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.x:0, FWD=()=>LAYOUT.fieldSrc?LAYOUT.fieldSrc.w:W;
@@ -3230,7 +3248,7 @@ function updateTrot(dt){
     if(Tr.seg>=4){ Tr.arrive=Tr.t; f.root.position.copy(Tr.path[4]); f.yaw=faceYaw(0,0,Tr.mates.length?Tr.mates[0].root.position.x:0,2); sfx('roar'); popup('歡迎回家！',{color:batTeam().hud,size:48,y:300,dur:1500}); }
     else { const a=Tr.path[Tr.seg], b=Tr.path[Tr.seg+1], u=Tr.s/a.distanceTo(b); f.root.position.set(lerp(a.x,b.x,u),0,lerp(a.z,b.z,u)); f.yaw=faceYaw(a.x,a.z,b.x,b.z); }
   }
-  if(Tr.arrive!=null&&Tr.t-Tr.arrive>1900) endTrot();
+  if(Tr.arrive!=null&&Tr.t-Tr.arrive>Math.max(1900,700+Tr.mates.length*500+700)) endTrot();
 }
 function endTrot(){ const Tr=G.trot; if(!Tr) return; G.trot=null; G.phase='idle'; G.camMode='bat'; Tr.done&&Tr.done(); }
 function trotFigures(dt){
@@ -3251,13 +3269,26 @@ function trotFigures(dt){
     }
     if(Tr.seg===3&&Tr.s>15&&!A) Object.assign(p,CELEB_ARMS.sky);
     drive(f,p,dt);
-  }else{
-    const k=(Tr.t-Tr.arrive)/1000, up=Math.max(0,Math.sin(k*Math.PI*1.6))*0.45;
-    drive(f,Object.assign({},STAND,CELEB_ARMS.sky,{lift:up,lf:[0.14,0.08+up*.3,0.02],rf:[-0.14,0.08+up*.3,0.02]}),dt);
+  }
+  // welcome home: teammates gather round, the scorer high-fives each one in turn, the rest clap and jump
+  const k=Tr.arrive==null?-1:(Tr.t-Tr.arrive)/1000, n=Tr.mates.length, slot=k<0.35?-1:Math.min(n-1,Math.floor((k-0.35)/0.5)), su=k<0.35?0:((k-0.35)/0.5)%1;
+  if(Tr.arrive!=null){
+    const fp=f.root.position;
+    if(slot>=0&&n){ const m=Tr.mates[slot].root.position; f.yaw=Math.atan2(m.x-fp.x,m.z-fp.z); }
+    const slap=Math.max(0,Math.sin(su*Math.PI));
+    const p=slot>=0&&n?P({hy:-0.04,rh:[-0.08,1.62+slap*0.38,0.3+slap*0.25],re:[-0.55,1.5,0.1],lh:[0.2,1.15,0.25],le:[0.5,1.1,0.1],hd:[-0.15,0,0]})
+      :Object.assign({},STAND,CELEB_ARMS.sky,{lift:Math.max(0,Math.sin(k*Math.PI*1.6))*0.4});
+    if(slot===n-1&&su>0.6) Object.assign(p,{lift:Math.sin((su-0.6)/0.4*Math.PI)*0.35});
+    drive(f,p,dt);
+    if(slot>=0&&slot!==Tr.slapped&&su>0.5){ Tr.slapped=slot; if(AU.ctx&&AU.on){ INS.clap(AU.ctx.currentTime,.7); INS.clap(AU.ctx.currentTime+.012,.5); } }
   }
   Tr.mates.forEach((m,i)=>{
-    if(Tr.arrive==null){ const b=(G.clock/400+i*.3)%1, c=Math.sin(b*Math.PI*2); drive(m,P({hy:-0.05,lh:[0.04,1.25+c*.05,0.35],rh:[-0.04,1.25-c*.05,0.35],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1]}),dt); }
-    else { const k=(Tr.t-Tr.arrive)/1000, up=Math.max(0,Math.sin((k+i*.2)*Math.PI*1.6))*0.35; const toB=new V3().subVectors(f.root.position,m.root.position); m.yaw=Math.atan2(toB.x,toB.z); drive(m,Object.assign({},STAND,{lift:up,rh:[-0.15,1.95,0.35],re:[-0.6,1.6,0.1],lh:[0.15,1.95,0.35],le:[0.6,1.6,0.1]}),dt); }
+    if(Tr.arrive==null){ const b=(G.clock/400+i*.3)%1, c=Math.sin(b*Math.PI*2); drive(m,P({hy:-0.05,lh:[0.04,1.25+c*.05,0.35],rh:[-0.04,1.25-c*.05,0.35],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1]}),dt); return; }
+    const fp=f.root.position, ang=Math.PI*0.65*((n>1?i/(n-1):0.5)-0.5)+Math.PI, tgt=new V3(fp.x+Math.sin(ang)*0.95,0,fp.z+Math.cos(ang)*0.95);
+    m.root.position.lerp(tgt,1-Math.exp(-dt*4)); m.root.position.y=0;
+    const toB=new V3().subVectors(fp,m.root.position); m.yaw=Math.atan2(toB.x,toB.z);
+    if(i===slot){ const slap=Math.max(0,Math.sin(su*Math.PI)); drive(m,P({hy:-0.04,rh:[-0.08,1.62+slap*0.38,0.3+slap*0.25],re:[-0.55,1.5,0.1],lh:[0.2,1.15,0.25],le:[0.5,1.1,0.1]}),dt); }
+    else { const c=Math.abs(Math.sin((k*3+i*0.7)*Math.PI)), up=Math.max(0,Math.sin((k+i*.23)*Math.PI*2))*0.25; drive(m,Object.assign({},STAND,{lift:up,lh:[0.06,1.45+c*0.25,0.38],rh:[-0.06,1.45+c*0.25,0.38],le:[0.55,1.25,0.1],re:[-0.55,1.25,0.1]}),dt); }
   });
 }
 function skipReplay(){ if(G.phase==='replay'&&G.play&&G.play.t>0.3) G.play.t=G.play.endT; }
@@ -4740,6 +4771,7 @@ SAVE.settings=Object.assign({sound:true,music:80,voice:true,assist:true},SAVE.se
 AU.on=SAVE.settings.sound;
 function renderSettings(){
   const s=SAVE.settings;
+  $('setQual').textContent={auto:'自動',high:'高畫質',low:'省電'}[s.quality||'auto'];
   $('setAiVoice').textContent=s.aiVoice===false?'關':'開'; $('setAiVoice').classList.toggle('sel',s.aiVoice!==false);
   [['setSound','sound'],['setVoice','voice'],['setAssist','assist'],['setFast','fast']].forEach(([id,k])=>{ $(id).textContent=s[k]?'開':'關'; $(id).classList.toggle('sel',s[k]); });
   $('setMusic').value=s.music;
@@ -4781,6 +4813,7 @@ $('importFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=
       SAVE=Object.assign(loadSave(),s); persist(); renderSettings(); $('tCoins').textContent=SAVE.coins; $('setNote').textContent='存檔已匯入！'; }
     catch(_){ $('setNote').textContent='這個檔案不是熱血應援棒球的存檔。'; } e.target.value=''; };
   r.readAsText(f); };
+$('setQual').onclick=()=>{ const order=['auto','high','low'], cur=SAVE.settings.quality||'auto'; SAVE.settings.quality=order[(order.indexOf(cur)+1)%3]; QUAL.applied=false; persist(); renderSettings(); };
 $('setTut').onclick=()=>{ SAVE.tut={}; persist(); $('setTut').textContent='下一場開始'; };
 $('setFast').onclick=()=>{ SAVE.settings.fast=!SAVE.settings.fast; persist(); renderSettings(); };
 $('setAssist').onclick=()=>{ SAVE.settings.assist=!SAVE.settings.assist; persist(); renderSettings(); };
@@ -4985,7 +5018,7 @@ function musicMode(){
 if(renderer){ buildWorld(); buildStage(); }
 let last=performance.now();
 function frame(now){
-  const dt=Math.min(50,now-last); last=now;
+  const raw=now-last, dt=Math.min(50,raw); last=now; qualityTick(raw);
   if(G&&renderer&&!G.paused){ update(dt); updateWeather(dt); }
   if(TITLE.scene&&!$('scrTitle').hidden) updateTitle(dt);
   render();
@@ -5054,7 +5087,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010031028', box=document.getElementById('upd');
+  const BUILD='20261010105942', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
