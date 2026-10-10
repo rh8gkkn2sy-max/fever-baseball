@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.26（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.27（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.26（2026.10.11）</div>
+    <div class="ver">版本 2.27（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1470,10 +1470,48 @@ function arcStrip(rFn,y0,y1,s0,s1,step,uLen){
 // the stands bounce with their team; a wave (人浪) can run round them: uWave strength, uWaveA where its crest is (degrees around the park)
 function crowdHook(m,U){ U.uWave=U.uWave||{value:0}; U.uWaveA=U.uWaveA||{value:-120}; m.onBeforeCompile=sh=>{ sh.uniforms.uTime=U.uTime; sh.uniforms.uHome=U.uHome; sh.uniforms.uAway=U.uAway; sh.uniforms.uWave=U.uWave; sh.uniforms.uWaveA=U.uWaveA;
   sh.vertexShader='attribute float aPhase;\nattribute float aTeam;\nattribute float aAng;\nuniform float uTime;\nuniform float uHome;\nuniform float uAway;\nuniform float uWave;\nuniform float uWaveA;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nfloat amp=aTeam<0.5?uHome:(aTeam<1.5?uAway:0.0);\ntransformed.y+=amp*max(0.0,sin(uTime*13.82+aPhase));\nfloat wd=(aAng-uWaveA)/12.0;\ntransformed.y+=uWave*1.05*exp(-wd*wd)*(0.85+0.3*fract(aPhase*7.13));'); }; return m; }
+// behind the plate: the backstop net, a glass suite level with a roof over it, and a dugout down each line
+function buildGrandstand(inner,base,ROWS,RD,RH){
+  const g=new THREE.Group(); scene.add(g); S3.grand=g;
+  const M2=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8},o||{}));
+  // net: a fine diamond mesh you can see the stands through
+  const nc=document.createElement('canvas'); nc.width=nc.height=64; const ng=nc.getContext('2d'); ng.strokeStyle='rgba(225,230,240,.55)'; ng.lineWidth=1.4;
+  ng.beginPath(); ng.moveTo(0,0); ng.lineTo(64,64); ng.moveTo(64,0); ng.lineTo(0,64); ng.stroke();
+  const nt=new THREE.CanvasTexture(nc); nt.wrapS=nt.wrapT=THREE.RepeatWrapping; nt.repeat.set(1,9);
+  const net=new THREE.Mesh(arcStrip(s=>inner(s)-0.6,0,9.5,118,242,2,1.4),new THREE.MeshBasicMaterial({map:nt,transparent:true,depthWrite:false,side:THREE.DoubleSide,fog:true}));
+  g.add(net);
+  [118,150,180,210,242].forEach(s=>{ const p=polar(s,inner(s)-0.6), pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,9.6,6),M2(0x9aa0ad,{metalness:.5})); pole.position.set(p.x,4.8,p.z); g.add(pole); });
+  // padded backstop wall with a lit ribbon
+  g.add(new THREE.Mesh(arcStrip(s=>inner(s)-0.05,0,1.1,92,268,2,30),M2(0x1b2a4a,{side:THREE.DoubleSide})));
+  const rib=new THREE.Mesh(arcStrip(s=>inner(s)-0.07,0.75,1.05,92,268,2,30),new THREE.MeshBasicMaterial({color:0xffd21f,side:THREE.DoubleSide,toneMapped:false})); g.add(rib); S3.grandRib=rib;
+  // suite level: a dark glass band with warm lights, then a roof sloping out over the upper rows
+  const topR=s=>inner(s)+ROWS*RD, topY=s=>base(s)+ROWS*RH;
+  const band=new THREE.Mesh(arcStrip(s=>topR(s)+0.2,0,2.8,96,264,2,8),new THREE.MeshStandardMaterial({color:0x101830,emissive:0x2a2410,roughness:.2,metalness:.6,side:THREE.DoubleSide}));
+  band.position.y=topY(180); g.add(band);
+  for(let s=100;s<=260;s+=4.5){ const p=polar(s,topR(s)+0.1), w=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),color:0xffd9a0,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true})); w.position.set(p.x,topY(s)+1.4,p.z); w.scale.set(2.4,1.6,1); g.add(w); }
+  { const pos=[],idx=[]; let k=0; for(let s=96;s<=264;s+=3){ const a=polar(s,topR(s)+1.2), b=polar(s,topR(s)-9); pos.push(a.x,topY(s)+4.2,a.z,b.x,topY(s)+3.2,b.z); if(k){ const q=k*2; idx.push(q-2,q-1,q,q-1,q+1,q); } k++; }
+    const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo,M2(0x2a3150,{side:THREE.DoubleSide,roughness:.6})));
+    for(let s=100;s<=260;s+=8){ const b=polar(s,topR(s)-8.6), l=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),color:0xfff3d6,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false})); l.position.set(b.x,topY(s)+3.0,b.z); l.scale.set(5,5,1); g.add(l); } }
+  // dugouts: sunk into the front of the stands between home and first / third
+  S3.dugouts=[];
+  [-1,1].forEach(sd=>{ const s=sd*104, p=polar(s,inner(s)-1.4), yaw=Math.atan2(-p.x,-p.z);
+    const d=new THREE.Group(); d.position.set(p.x,0,p.z); d.rotation.y=yaw; g.add(d);
+    const back=new THREE.Mesh(new THREE.BoxGeometry(13,2.4,0.3),M2(0x0b0f1c)); back.position.set(0,0.4,-1.2); d.add(back);
+    const roof=new THREE.Mesh(new THREE.BoxGeometry(13.4,0.35,2.9),M2(0x1b2a4a)); roof.position.set(0,1.45,-0.1); d.add(roof);
+    const lip=new THREE.Mesh(new THREE.BoxGeometry(13.4,0.32,0.12),new THREE.MeshBasicMaterial({color:0xffd21f,toneMapped:false})); lip.position.set(0,1.45,1.32); d.add(lip); S3.dugouts.push(lip);
+    const bench=new THREE.Mesh(new THREE.BoxGeometry(12,0.4,0.5),M2(0x3a3f55)); bench.position.set(0,-0.1,-0.8); d.add(bench);
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(13,0.08,0.08),M2(0xd8dce6,{metalness:.6})); rail.position.set(0,0.55,1.2); d.add(rail);
+    [-6.4,6.4].forEach(x=>{ const w=new THREE.Mesh(new THREE.BoxGeometry(0.3,1.6,2.9),M2(0x1b2a4a)); w.position.set(x,0.65,-0.1); d.add(w); });
+  });
+}
 function makeCrowd(seats,U,parent){
   const n=seats.length;
-  const bodyG=new THREE.BoxGeometry(0.44,0.62,0.3); bodyG.translate(0,0.31,0);
-  const headG=new THREE.SphereGeometry(0.12,6,5); headG.translate(0,0.74,0);
+  // ~170 triangles a fan: a tapered torso with rounded shoulders and arms, an oval head (thousands of them, so kept lean)
+  const arm=new THREE.CylinderGeometry(0.05,0.045,0.42,4,1,true);
+  const bodyG=mergeParts([[new THREE.CylinderGeometry(0.17,0.19,0.52,6,1,true),_M(0,0.28,0,0,1,1,0.72)],[new THREE.SphereGeometry(1,6,4,0,Math.PI*2,0,Math.PI/2),_M(0,0.54,0,0,0.2,0.08,0.14)],
+    [arm,_M(-0.215,0.33,0.03,0,1,1,1)],[arm,_M(0.215,0.33,0.03,0,1,1,1)]]);
+  const headG=new THREE.SphereGeometry(0.115,7,5); headG.scale(0.92,1.08,0.98); headG.translate(0,0.73,0);
   const phase=new Float32Array(n), team=new Float32Array(n), ang=new Float32Array(n);
   const B=new THREE.InstancedMesh(bodyG,crowdHook(new THREE.MeshStandardMaterial({roughness:.85}),U),n);
   const Hd=new THREE.InstancedMesh(headG,crowdHook(new THREE.MeshStandardMaterial({color:col('#d9a882'),roughness:.8}),U),n);
@@ -1574,12 +1612,14 @@ function buildWorld(){
   gate.position.set(gp.x*0.995,1.5,gp.z*0.995); gate.lookAt(0,1.5,0); scene.add(gate);
 
   // stands + crowd
-  const inner=s=>{ const as=Math.abs(s); return as<=45?wallM(s)+1.2:lerp(wallM(45)+1.2,24,(as-45)/43); };
-  const base=s=>{ const as=Math.abs(s); return as<=45?3.3:lerp(3.3,1.1,(as-45)/43); };
+  // the bowl goes all the way round: outfield stands, down the lines, and the main grandstand behind the plate
+  const sN=s=>((s+180)%360+360)%360-180;
+  const inner=s=>{ const as=Math.abs(sN(s)); return as<=45?wallM(s)+1.2:as<=88?lerp(wallM(45)+1.2,24,(as-45)/43):lerp(24,19,(as-88)/92); };
+  const base=s=>{ const as=Math.abs(sN(s)); return as<=45?3.3:as<=88?lerp(3.3,1.1,(as-45)/43):1.1; };
   const ROWS=18, RD=0.9, RH=0.52;
   const pos=[], colr=[], tread=col('#262c58'), riser=col('#181d40');
   const push=(p,c)=>{ pos.push(p.x,p.y,p.z); colr.push(c.r,c.g,c.b); };
-  for(let s=-88;s<88;s+=1.5){
+  for(let s=-180;s<180;s+=1.5){
     const s2=s+1.5;
     for(let i=0;i<ROWS;i++){
       const r1=inner(s)+i*RD, r2=inner(s2)+i*RD, y1=base(s)+i*RH, y2=base(s2)+i*RH;
@@ -1594,9 +1634,10 @@ function buildWorld(){
   S3.stands=new THREE.Mesh(stG,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,side:THREE.DoubleSide})); scene.add(S3.stands);
   S3.standTop=s=>({r:inner(s)+ROWS*RD,y:base(s)+ROWS*RH}); S3.standInner=inner;
   const seats=[];
-  for(let i=0;i<ROWS;i++) for(let s=-86;s<86;){ const r=inner(s)+i*RD+RD*.5; if(rnd()>.12){ const p=polar(s,r); p.y=base(s)+i*RH; seats.push({p,yaw:Math.atan2(-p.x,-p.z)}); } s+=(0.78/r)/D2R; }
+  for(let i=0;i<ROWS;i++) for(let s=-180;s<180;){ const r=inner(s)+i*RD+RD*.5; if(rnd()>.12){ const p=polar(s,r); p.y=base(s)+i*RH; seats.push({p,yaw:Math.atan2(-p.x,-p.z)}); } s+=(0.78/r)/D2R; }
   S3.CU={uTime:{value:0},uHome:{value:0.1},uAway:{value:0.05}};
   S3.crowd=makeCrowd(seats,S3.CU,scene);
+  buildGrandstand(inner,base,ROWS,RD,RH);
 
   // light towers
   const glowT=glowTexture();
@@ -1617,7 +1658,7 @@ function buildWorld(){
   });
 
   // centre-field video board
-  const vb=document.createElement('canvas'); vb.width=512; vb.height=220; S3.vbCanvas=vb; S3.vbTex=canvasTex(vb); S3.vbKey='';
+  const vb=document.createElement('canvas'); vb.width=1024; vb.height=440; S3.vbCanvas=vb; S3.vbTex=canvasTex(vb); S3.vbKey='';
   const vbz=-(wallM(0)+1.2+ROWS*RD+8);
   const frame=new THREE.Mesh(new THREE.BoxGeometry(32,14,1.2),new THREE.MeshStandardMaterial({color:0x14172c})); frame.position.set(0,22,vbz-0.7); scene.add(frame);
   const scr=new THREE.Mesh(new THREE.PlaneGeometry(30,12.6),new THREE.MeshBasicMaterial({map:S3.vbTex,toneMapped:false})); scr.position.set(0,22,vbz); scene.add(scr); S3.vbGroup=[frame,scr];
@@ -1696,11 +1737,64 @@ function makeBat(){
 function vbDraw(a,b,c){
   const key=a+'|'+b+'|'+c; if(S3.vbKey===key) return; S3.vbKey=key;
   const g=S3.vbCanvas.getContext('2d');
-  g.fillStyle='#05060f'; g.fillRect(0,0,512,220);
-  g.fillStyle=c; g.font=`400 46px ${FONT_D}`; g.textAlign='center'; g.textBaseline='middle'; g.fillText(a,256,62);
-  g.fillStyle='#ffffff'; g.font=`900 72px ${FONT_TC}`; g.fillText(b,256,150);
-  g.fillStyle='rgba(0,0,0,.28)'; for(let y=0;y<220;y+=4) g.fillRect(0,y,512,1);
-  S3.vbTex.needsUpdate=true;
+  g.fillStyle='#05060f'; g.fillRect(0,0,1024,440);
+  g.fillStyle=c; g.font=`400 92px ${FONT_D}`; g.textAlign='center'; g.textBaseline='middle'; g.fillText(a,512,124);
+  g.fillStyle='#ffffff'; g.font=`900 144px ${FONT_TC}`; g.fillText(b,512,300);
+  vbScan(g); S3.vbTex.needsUpdate=true;
+}
+function vbScan(g){ g.fillStyle='rgba(0,0,0,.25)'; for(let y=0;y<440;y+=4) g.fillRect(0,y,1024,1); }
+// The centre-field board: between pitches the batter's card (portrait, number, tonight's line, the count);
+// on a result a full-screen caption with rays and sparkle, the way a real ballpark's board shouts it
+const VB={img:{},frame:0};
+function vbPortrait(p){
+  const im=VB.img[p.id]; if(im) return im.complete&&im.naturalWidth?im:null;
+  const u=portraitOf(p,url=>{ if(!VB.img[p.id]){ const i=new Image(); i.onload=()=>{ S3.vbKey=''; }; i.src=url; VB.img[p.id]=i; } });
+  if(u&&!VB.img[p.id]){ const i=new Image(); i.onload=()=>{ S3.vbKey=''; }; i.src=u; VB.img[p.id]=i; }
+  return null;
+}
+function vbFlash(text,sub,color,kind){ if(typeof G==='undefined'||!G||G.attract) return; G.vbFx={text,sub,color,kind,t0:G.clock,dur:kind==='hr'?3400:2600}; }
+function vbBatter(p,T){
+  const st=`${p.id}|${p.h}|${p.ab}|${G.balls}${G.strikes}${G.outs}|${!!vbPortrait(p)}`; if(S3.vbKey===st) return; S3.vbKey=st;
+  const g=S3.vbCanvas.getContext('2d'), hud=T.hud;
+  const bg=g.createLinearGradient(0,0,1024,440); bg.addColorStop(0,'#0b1030'); bg.addColorStop(1,'#05060f'); g.fillStyle=bg; g.fillRect(0,0,1024,440);
+  g.fillStyle=hud; g.fillRect(0,0,16,440); g.globalAlpha=.25; g.beginPath(); g.arc(190,230,190,0,Math.PI*2); g.fill(); g.globalAlpha=1;
+  const im=vbPortrait(p); if(im) g.drawImage(im,10,24,330,385);
+  g.textBaseline='middle'; g.textAlign='left';
+  g.fillStyle=hud; g.font=`400 110px ${FONT_D}`; g.fillText('#'+p.num,370,92);
+  g.fillStyle='#fff'; g.font=`900 104px ${FONT_TC}`; g.fillText(p.name,370,200);
+  g.fillStyle='#C9CBE6'; g.font=`700 40px ${FONT_TC}`; g.fillText(`本場 ${p.h}-${p.ab}　打擊率 ${p.avg}　全壘打 ${p.hr}`,372,288);
+  g.fillStyle='rgba(255,255,255,.08)'; g.fillRect(360,330,650,90);
+  const dots=(lab,v,m,c,x)=>{ g.fillStyle='#8A8FB8'; g.font=`400 40px ${FONT_D}`; g.fillText(lab,x,375); for(let i=0;i<m;i++){ g.fillStyle=i<v?c:'#22264A'; g.beginPath(); g.arc(x+56+i*42,375,15,0,Math.PI*2); g.fill(); } };
+  dots('B',G.balls,3,'#5CE87A',380); dots('S',G.strikes,2,'#FFD21F',600); dots('O',G.outs,2,'#FF5A5A',790);
+  vbScan(g); S3.vbTex.needsUpdate=true;
+}
+function vbDrawFx(F){
+  const g=S3.vbCanvas.getContext('2d'), u=(G.clock-F.t0)/F.dur, t=(G.clock-F.t0)/1000, c=F.color;
+  g.fillStyle='#05060f'; g.fillRect(0,0,1024,440);
+  // rays turning behind the word
+  g.save(); g.translate(512,220); g.rotate(t*0.9); g.globalAlpha=.55;
+  for(let i=0;i<16;i++){ g.fillStyle=i%2?c:'#1a1f4a'; g.beginPath(); g.moveTo(0,0); g.arc(0,0,700,i/16*Math.PI*2,(i+1)/16*Math.PI*2); g.closePath(); g.fill(); }
+  g.restore(); g.globalAlpha=1;
+  const vg=g.createRadialGradient(512,220,40,512,220,560); vg.addColorStop(0,'rgba(5,6,15,0)'); vg.addColorStop(1,'rgba(5,6,15,.85)'); g.fillStyle=vg; g.fillRect(0,0,1024,440);
+  // sparkle (home runs get fireworks)
+  const n=F.kind==='hr'?70:30; for(let i=0;i<n;i++){ const a=i*2.399+t*(F.kind==='hr'?1.6:0.8), r=(60+((i*97)%380))*(F.kind==='hr'?(0.4+((t*0.9+i*0.13)%1)):1); const x=512+Math.cos(a)*r*1.5, y=220+Math.sin(a)*r*0.7;
+    g.globalAlpha=.4+.6*Math.abs(Math.sin(t*6+i)); g.fillStyle=i%3?'#fff':'#FFD54A'; g.fillRect(x-3,y-3,6,6); } g.globalAlpha=1;
+  // the word lands big and settles, with a shake on impact
+  const pop=u<0.12?0.3+u/0.12*0.95:u<0.2?1.25-(u-0.12)/0.08*0.25:1+0.03*Math.sin(t*10), sh=u<0.2?(1-u/0.2)*14:0;
+  g.save(); g.translate(512+(Math.random()-.5)*sh,(F.sub?190:220)+(Math.random()-.5)*sh); g.scale(pop,pop);
+  g.textAlign='center'; g.textBaseline='middle'; const fs=F.text.length>3?150:190; g.font=`900 ${fs}px ${FONT_TC}`;
+  g.lineWidth=18; g.strokeStyle='#05060f'; g.strokeText(F.text,0,0); g.fillStyle=Math.floor(t*8)%2&&u<0.5?'#fff':c; g.fillText(F.text,0,0); g.restore();
+  if(F.sub){ g.textAlign='center'; g.textBaseline='middle'; g.font=`400 64px ${FONT_D}`; g.globalAlpha=Math.min(1,u*5); g.lineWidth=8; g.strokeStyle='#05060f'; g.strokeText(F.sub,512,365); g.fillStyle='#fff'; g.fillText(F.sub,512,365); g.globalAlpha=1; }
+  // flashing frame
+  if(Math.floor(t*6)%2){ g.strokeStyle=c; g.lineWidth=16; g.strokeRect(8,8,1008,424); }
+  vbScan(g); S3.vbTex.needsUpdate=true;
+}
+function vbUpdate(a,b,c,state){
+  const F=G.vbFx;
+  if(F&&G.clock-F.t0<F.dur){ if((VB.frame++)%2===0) vbDrawFx(F); S3.vbKey=''; return; }
+  if(F) G.vbFx=null;
+  if(state==='bat') return vbBatter(curBatter(),batTeam());
+  vbDraw(a,b,c);
 }
 
 /* =========================================================
@@ -3342,6 +3436,13 @@ function resolveOutcome(r){
   return {r,res:r.res,moves,outs,runs,text:t,color:col,size,nb,nr,hit:!!hitN,hl:null};
 }
 function showOutcome(o){
+  { const hc=batTeam().hud, sub=o.runs?`得分 +${o.runs}`:null;
+    if(o.res==='HR') vbFlash('全壘打！',o.runs>1?`${o.runs} RUN HOME RUN`:'HOME RUN',hc,'hr');
+    else if(o.hit) vbFlash({'1B':'安打！','2B':'二壘安打','3B':'三壘安打'}[o.res]||'安打！',sub||'HIT',hc,'hit');
+    else if(o.res==='K') vbFlash('三振！',G.kLook?'STRIKE OUT・站著被三振':'STRIKE OUT',fieldTeamHud(),'k');
+    else if(o.res==='BB') vbFlash('保送',sub||'BASE ON BALLS',hc,'bb');
+    else if(o.res==='DP') vbFlash('雙殺！','DOUBLE PLAY',fieldTeamHud(),'out');
+    else if(o.runs) vbFlash('得分！',sub,hc,'hit'); }
   let sub='';
   if(o.runs&&!G.practice) sub=userBatting()?`攻下 ${o.runs} 分！`:`失 ${o.runs} 分`;
   popup(o.text,{sub,color:o.color,size:o.size,dur:1600,y:330});
@@ -3354,6 +3455,7 @@ function showOutcome(o){
     else if(!o.hit&&o.res!=='BB'){ setMood('jump',1200); sfx('cheer'); }
   }
 }
+function fieldTeamHud(){ return (batSide()==='home'?G.away:G.home).hud; }
 function commitOutcome(o){
   const user=userBatting(), b=curBatter(), side=batSide(), d0=G.score.home-G.score.away;
   G.outs+=o.outs; G.bases=o.nb; G.runners=o.nr;
@@ -3709,7 +3811,8 @@ function update(dt){
   else if(G.skill){ a='CHEER TIME'; b=SKILLS[G.skill].n; c=G.home.hud; }
   else if(G.board){ a=G.board.a; b=G.board.b; c=G.board.c; }
   else { a=G.home.en; b=G.home.city+G.home.name; c=G.home.hud; }
-  vbDraw(a,b,c);
+  const atBat=!G.show&&G.phase!=='lucky'&&!G.skill&&!G.attract&&!G.over&&G.board&&G.board.a&&G.board.a[0]==='#';
+  vbUpdate(a,b,c,atBat?'bat':null);
   if(Math.floor(G.clock/33)%2===0) drawLed(stageTeamForCut(),G.phase==='lucky'?'LUCKY 7':G.chance&&!G.cut?'CHANCE':null);
 }
 function updateFlight(dt){
@@ -6006,7 +6109,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011021229', box=document.getElementById('upd');
+  const BUILD='20261011021717', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
