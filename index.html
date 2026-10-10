@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,6 +42,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
 #wrap.land .scr{padding-top:calc(var(--u)*26 + var(--st,0px))}
 #stage{position:relative;width:360px;height:640px;--u:1px;--fu:1px;border-radius:calc(var(--u)*18);overflow:hidden;box-shadow:0 0 0 1px var(--line),0 20px 80px rgba(0,0,0,.6);background:var(--night-2)}
 #gl,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
+html,body,#wrap,#stage{touch-action:manipulation}
 #hud{touch-action:none;user-select:none;-webkit-user-select:none}
 #mute{position:absolute;right:calc(var(--u)*10);bottom:calc(var(--u)*12);width:calc(var(--u)*40);height:calc(var(--u)*40);border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--led);font:700 calc(var(--fu)*18) var(--f-body);cursor:pointer;z-index:5}
 #mute:focus-visible,.btn:focus-visible,.card:focus-visible,.pill:focus-visible,.pc:focus-visible{outline:2px solid var(--led);outline-offset:2px}
@@ -199,7 +200,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.7（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.8（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -221,7 +222,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.7（2026.10.10）</div>
+    <div class="ver">版本 2.8（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2557,7 +2558,7 @@ function newGame(hi,ai,li,diff,attract){
   G.passive={}; G.sq.home.girls.forEach(g=>{ if(!GIRL_SKILLS[g.skill].active) G.passive[g.skill]=true; });
   G.awayLeader=G.sq.away.girls[G.sq.away.cap].name;
   let hr=0; for(let k=0;k<6;k++){ const v=pick([0,0,0,0,1,1,2]); G.line.home.push(v); hr+=v; }
-  const target=hr+1+(rnd()<.5?1:0), ar=[0,0,0,0,0,0];
+  const target=hr+1+(diff!=='rookie'&&rnd()<.5?1:0), ar=[0,0,0,0,0,0];
   for(let k=0;k<target;k++) ar[Math.floor(rnd()*6)]++;
   G.line.away=ar; G.score.home=hr; G.score.away=target;
   G.hits.home=hr+2+Math.floor(rnd()*4); G.hits.away=target+2+Math.floor(rnd()*4);
@@ -2701,8 +2702,8 @@ function makePitch(type,end,speed){
 function pitchSpeed(p,type,q){ return p.velo+PT[type].d-2+rnd()*2+(q==null?0:(q-.5)*4)-fatigue(p)*7; }
 // difficulty knobs, per level: the user's bat (window, bat size, power) and the CPU's bat and arm
 const BAL={
-  rookie:{tw:112,bat:1.0,ev:.9,cpuCon:1.12,cpuSwing:1,zone:.5,edge:.55,chase:.24},
-  pro:{tw:96,bat:.9,ev:.88,cpuCon:1.25,cpuSwing:1.05,zone:.46,edge:.8,chase:.34}};
+  rookie:{tw:135,bat:1.12,ev:1.08,cpuCon:.62,cpuSwing:.95,zone:.62,edge:.35,chase:.16,acc:1.5,cpuEV:.84,qk:.7},
+  pro:{tw:96,bat:.9,ev:.88,cpuCon:1.25,cpuSwing:1.05,zone:.46,edge:.8,chase:.34,acc:1,cpuEV:1,qk:1}};
 // first-game coach: one hint at a time, each step clears when the player has done it
 const TUT_STEPS=['aim','pick','ring','move','swing','skill'];
 function tutOn(){ return !(SAVE.tut&&SAVE.tut.all)&&G&&!G.attract; }
@@ -2768,7 +2769,7 @@ function confirmAim(){
 function stopGauge(){
   if(G.phase!=='gauge'||!G.ring) return; tutDone('ring');
   const pp=curPitcher(), f=fatigue(pp), R=G.ring, rt=ZONE.w*.09, perfect=G.skill==='eye';
-  const acc=perfect?1:clamp(1-Math.abs(R.r-rt)/(ZONE.w*.2),0,1);
+  const acc=perfect?1:clamp(1-Math.abs(R.r-rt)/(ZONE.w*.2*bal().acc),0,1);
   const sc=perfect?0:(1-acc)*ZONE.w*.42*(1+f), a=rnd()*Math.PI*2, r2=sc*Math.sqrt(rnd());
   const end={x:G.aim.x+R.ox+Math.cos(a)*r2,y:G.aim.y+R.oy+Math.sin(a)*r2};
   const q=(pp.pq&&pp.pq[G.ptype])||.6;
@@ -2795,7 +2796,7 @@ function resolveCpu(P){
     if(rnd()<.42){ sfx('tick'); startFoul(P.end3,rnd()<.5?-1:1); return countEvent('foul'); }
     const q=clamp(Math.pow(rnd(),1.55-b.pow)*(1-P.nasty*.4)+.08,0,1);
     sfx('crack');
-    return startPlay(60+52*q*(.7+.5*b.pow),16+gauss()*20,((rnd()-.5)*84)*(b.bat==='L'?-1:1),P.end3,q*.8);
+    return startPlay((60+52*q*(.7+.5*b.pow))*bal().cpuEV,16+gauss()*20,((rnd()-.5)*84)*(b.bat==='L'?-1:1),P.end3,q*.8);
   }
   sfx('mitt');
   if(P.cpuSwing) return countEvent('swingMiss');
@@ -2806,11 +2807,13 @@ function gauss(){ return (rnd()+rnd()+rnd()-1.5)*1.2; }
 // The hitting zone is the bat itself: knob, handle, barrel and sweet spot drawn over the plate
 function batGeom(){
   const b=curBatter(), dirX=b.bat==='L'?-1:1, light=G.batMode==='light', rook=G.diff==='rookie';
-  const bk=bal().bat; let Lb=ZONE.w*(light?1.42:1.18)*bk*(.9+.2*b.con), rb=ZONE.w*(light?.088:.066)*bk*(rook?1.08:1);
-  if(G.skill==='sweet'){ Lb*=1.3; rb*=1.4; }
+  // contact makes the whole bat longer and fatter; power widens the sweet spot
+  const bk=bal().bat; let Lb=ZONE.w*(light?1.42:1.18)*bk*(.7+.6*b.con), rb=ZONE.w*(light?.088:.066)*bk*(rook?1.08:1)*(.65+.7*b.con);
+  let sw=clamp(.04+.16*b.pow,.07,.2);
+  if(G.skill==='sweet'){ Lb*=1.3; rb*=1.4; sw=Math.min(.23,sw*1.25); }
   if(G.chance&&G.passive&&G.passive.chance){ Lb*=1.15; rb*=1.2; }
   const a=.12;
-  return {Lb,rb,rh:ZONE.w*.034,ux:Math.cos(a)*dirX,uy:Math.sin(a),dirX,c:G.cursor,br:ZONE.w*.05};
+  return {Lb,rb,sw,rh:ZONE.w*.034,ux:Math.cos(a)*dirX,uy:Math.sin(a),dirX,c:G.cursor,br:ZONE.w*.05};
 }
 function cursorR(){ return batGeom().rb*2; }
 function timingWindow(){ return bal().tw*(G.batMode==='power'?.85:1); }
@@ -2821,10 +2824,11 @@ function batContact(P){
   const g=batGeom(), {s,v}=batLocal(g,P.end.x,P.end.y), r=batRadius(g,s);
   if(s<-.72*g.Lb-g.br||s>.28*g.Lb+g.br||Math.abs(v)>r+g.br) return null;
   let along=1;
-  if(s<-.1*g.Lb) along=1-Math.pow((-.1*g.Lb-s)/(.62*g.Lb),1.3)*.8;
-  else if(s>.1*g.Lb) along=1-((s-.1*g.Lb)/(.18*g.Lb+g.br))*.6;
+  const sw=g.sw*g.Lb;
+  if(s<-sw) along=1-Math.pow((-sw-s)/(.72*g.Lb-sw),1.3)*.8;
+  else if(s>sw) along=1-((s-sw)/(.28*g.Lb-sw+g.br))*.6;
   const vert=1-Math.pow(Math.abs(v)/(r+g.br),2)*.55;
-  const where=s<-.35*g.Lb?'打到手把（被塞）':s>.17*g.Lb?'打到棒頭':Math.abs(s)<=.1*g.Lb?'甜蜜點':'接近甜蜜點';
+  const where=s<-.35*g.Lb?'打到手把（被塞）':s>.17*g.Lb?'打到棒頭':Math.abs(s)<=g.sw*g.Lb?'甜蜜點':'接近甜蜜點';
   return {qs:clamp(along,0,1)*vert,s,v,r,g,where,jam:s<-.35*g.Lb};
 }
 function missText(P){
@@ -2844,7 +2848,7 @@ function userSwing(){
   if(Math.abs(dt)>TW){ G.fb={txt:dt<0?'太早了！':'太晚了！',c:'#FF8A8A',t:0}; return; }
   const C=batContact(P);
   if(!C){ G.fb={txt:missText(P),c:'#FF8A8A',t:0}; return; }
-  const qt=1-Math.pow(Math.abs(dt)/TW,1.8), q=C.qs*qt;
+  const qt=1-Math.pow(Math.abs(dt)/TW,1.8), q=Math.pow(C.qs*qt,bal().qk);
   const at=P.t+SWING_LEAD, b=curBatter(), lefty=b.bat==='L', light=G.batMode==='light';
   G.batHit={x:P.end.x,y:P.end.y,t:0};
   const tim=Math.abs(dt)<25?'時機完美':dt<0?`稍早 ${-Math.round(dt)}ms`:`稍晚 ${Math.round(dt)}ms`;
@@ -4096,7 +4100,7 @@ function drawBatCursor(){
   ctx.fillStyle='rgba(214,170,112,.32)'; ctx.fill(); ctx.strokeStyle=cc; ctx.lineWidth=2.5; ctx.stroke();
   const tp=pt(.24,0); ctx.beginPath(); ctx.arc(tp.x,tp.y,g.rb,0,Math.PI*2); ctx.fillStyle='rgba(214,170,112,.32)'; ctx.fill(); ctx.stroke();
   ctx.shadowBlur=0;
-  const a=pt(-.1,g.rb), b=pt(.1,g.rb), d=pt(.1,-g.rb), e=pt(-.1,-g.rb);
+  const a=pt(-g.sw,g.rb), b=pt(g.sw,g.rb), d=pt(g.sw,-g.rb), e=pt(-g.sw,-g.rb);
   ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(d.x,d.y); ctx.lineTo(e.x,e.y); ctx.closePath(); ctx.globalAlpha=.5; ctx.fillStyle=cc; ctx.fill(); ctx.globalAlpha=1;
   const k0=pt(-.72,0), k1=pt(.24,0); ctx.setLineDash([4,5]); ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(k0.x,k0.y); ctx.lineTo(k1.x,k1.y); ctx.stroke(); ctx.setLineDash([]);
   if(G.batHit&&G.batHit.t<600){ const u=G.batHit.t/600; ctx.globalAlpha=1-u; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(G.batHit.x,G.batHit.y,8+u*24,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
@@ -5196,6 +5200,12 @@ show('scrTitle');
 requestAnimationFrame(frame);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!renderer) return; S3.vbKey=''; Object.keys(texCache).forEach(k=>delete texCache[k]); if(G&&G.attract) startAttract(); drawAds(null); });
 </script>
+// fast repeated taps must never zoom the page (iOS double-tap zoom left the screen black until a rotation)
+{ let lastEnd=0;
+  document.addEventListener('touchend',e=>{ const n=performance.now(); if(n-lastEnd<400&&!(e.target.closest&&e.target.closest('input,textarea,select'))) e.preventDefault(); lastEnd=n; },{passive:false});
+  ['gesturestart','gesturechange','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+  // if the page got zoomed anyway, snap it back
+  if(window.visualViewport) visualViewport.addEventListener('resize',()=>{ if(visualViewport.scale>1.01){ const m=document.querySelector('meta[name=viewport]'); if(m){ const c=m.content; m.content=c.replace(/,?maximum-scale=[\d.]+/,'')+',maximum-scale=1'; setTimeout(()=>{ m.content=c; resize(); },350); } else resize(); } }); }
 <!-- Pass-phrase gate, only in the stand-alone site build (site/index.html) -->
 <div id="gate">
   <div class="gbox">
@@ -5254,7 +5264,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010123404', box=document.getElementById('upd');
+  const BUILD='20261010135333', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
