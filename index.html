@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.15（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.15.1（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.15（2026.10.10）</div>
+    <div class="ver">版本 2.15.1（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -3830,7 +3830,7 @@ function updateCatcher(dt){
   if(pl&&!pl.replay&&pl.t>0.3){ c.root.visible=true; const b=pl.ballPos; c.yaw=faceYaw(c.root.position.x,c.root.position.z,b.x,b.z); drive(c,FSTAND,dt); return; }
   c.yaw=Math.PI; const p=Object.assign({},FCATCH), P=G.pitch;
   // from the camera behind the plate he would hide the zone: draw him as a ghost there
-  const ghost=G.camMode==='bat'&&!(G.phase==='cut'&&G.cut&&G.cut.type!=='intro'), op=ghost?0:1;
+  const ghost=G.camMode==='bat'&&!(G.phase==='cut'&&G.cut&&G.cut.type!=='intro'), op=ghost?(userBatting()?0:0.2):1;
   if(c.ghostOp!==op){ c.ghostOp=op; c.ghostMats.forEach(m=>{ m.transparent=op<1; m.opacity=op; m.depthWrite=op===1; m.needsUpdate=true; }); }
   c.root.visible=op>0; if(op===0) return;
   // the glove sets up on the target, then follows the ball in
@@ -5625,7 +5625,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010160254', box=document.getElementById('upd');
+  const BUILD='20261010160647', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
