@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.25（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.26（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.25（2026.10.11）</div>
+    <div class="ver">版本 2.26（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -886,6 +886,10 @@ function songFor(kind,p,T){
   else if(kind==='chance') s=makeSong(hashStr(p.id+'c'),{key:key-3,bpm:154,minor:true,style:tm.style,lead:tm.leads[0],pat:[1,1,1,0,1,1,1,0],lyrics:chanceLyrics(p,T),
       calls:[callSet(n+'！',n+'！'),callSet('得分！','得分！')],chant:[cKey(n+'！'),cKey('得分！')]});
   // every club song now has the captain's call and the stands' answer, not only the batters' songs
+  else if(kind==='lucky'&&p&&p.v!=null){ const styles=Object.keys(TEAM_MUSIC).map(k=>TEAM_MUSIC[k]), st=styles[p.v%styles.length], ld=st.leads[(p.v>>3)%st.leads.length];
+    // lucky 7: a different band number every game (style, lead, tempo, key)
+    s=makeSong(hashStr(T.id+'lucky'+p.v),{key:key+[0,2,-3,5,-2][(p.v>>5)%5],bpm:p.bpm,style:st.style,lead:ld,
+      calls:[callSet(T.name+'！',T.name+'！'),callSet('加油！','加油！')],chant:[cKey(T.name+'！'),cKey('加油！')]}); }
   else if(kind==='anthem'||kind==='lucky') s=makeSong(hashStr(T.id+kind),{key,bpm:132,style:tm.style,lead:tm.leads[0],
       calls:[callSet(T.name+'！',T.name+'！'),callSet('加油！','加油！')],chant:[cKey(T.name+'！'),cKey('加油！')]});
   else if(kind==='win') s=makeSong(hashStr(T.id+'win'),{key,bpm:148,style:tm.style,lead:tm.leads[0],
@@ -1937,7 +1941,8 @@ function drawEmblem(g,x,y,r,T){
    ========================================================= */
 // shaped limbs instead of plain tubes: a lathe profile [[t (0 top..1 bottom), radius]] over the bone length,
 // centred like a cylinder so it drops into the old slots
-function limbGeo(len,prof,seg){ const pts=[new THREE.Vector2(0.001,len/2+0.004)]; prof.forEach(([t,r])=>pts.push(new THREE.Vector2(r,len/2-t*len))); pts.push(new THREE.Vector2(0.001,-len/2-0.004)); const g=new THREE.LatheGeometry(pts,seg||12); g.computeVertexNormals(); return g; }
+function limbGeo(len,prof,seg){ const pts=[new THREE.Vector2(0.001,len/2+0.004)]; prof.forEach(([t,r])=>pts.push(new THREE.Vector2(r,len/2-t*len))); pts.push(new THREE.Vector2(0.001,-len/2-0.004)); pts.reverse();  // bottom-to-top so the faces wind outward (else the near side culls away and the limb looks see-through)
+  const g=new THREE.LatheGeometry(pts,seg||12); g.computeVertexNormals(); return g; }
 // glue simple parts into one geometry (one draw call per hand or shoe)
 function mergeParts(parts){ const pos=[],nor=[]; parts.forEach(([g,m])=>{ const q=g.index?g.toNonIndexed():g.clone(); q.applyMatrix4(m); const p=q.attributes.position.array, n=q.attributes.normal.array; for(let i=0;i<p.length;i++){ pos.push(p[i]); nor.push(n[i]); } });
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); return g; }
@@ -1948,13 +1953,28 @@ function handGeo(k){ const P=[], sph=new THREE.SphereGeometry(1,10,8), cyl=new T
   [-0.025,-0.0085,0.0085,0.025].forEach((x,i)=>{ const L=(i===0||i===3?0.052:0.062)*k, y=-0.092*k-L/2; P.push([cyl,_M(x*k,y,0.011*k,0.32,0.0088*k,L,0.0088*k)]); P.push([tip,_M(x*k,y-L/2*0.95,0.011*k+L*0.16,0,0.0088*k,0.0088*k,0.0088*k)]); });
   P.push([cyl,_M(0.004*k,-0.058*k,0.034*k,-0.75,0.0105*k,0.05*k,0.0105*k)]); P.push([tip,_M(0.004*k,-0.074*k,0.052*k,0,0.0105*k,0.0105*k,0.0105*k)]);
   return mergeParts(P); }
-// a shoe from the ankle forward (+z): sole, rounded upper, toe box, heel counter
-function shoeGeo(k){ const P=[], box=new THREE.BoxGeometry(1,1,1), sph=new THREE.SphereGeometry(1,12,8);
-  P.push([box,_M(0,-0.07*k,0.05*k,0,0.095*k,0.022*k,0.27*k)]);
-  P.push([sph,_M(0,-0.045*k,0.045*k,0,0.05*k,0.04*k,0.13*k)]);
-  P.push([sph,_M(0,-0.052*k,0.15*k,0,0.047*k,0.032*k,0.055*k)]);
-  P.push([sph,_M(0,-0.04*k,-0.055*k,0,0.046*k,0.04*k,0.04*k)]);
-  return mergeParts(P); }
+// a baseball cleat from the ankle forward (+z): a foot-shaped sole (narrow at the arch, round at heel and toe),
+// a rounded upper with heel counter, toe box, tongue and collar, plus side stripes, laces and spikes in their own parts
+function footOutline(k,sc){ const prof=[[0,0],[.04,.028],[.12,.04],[.3,.04],[.45,.035],[.65,.047],[.8,.047],[.92,.036],[.98,.02],[1,0]], z0=-0.088, z1=0.194, N=22, L=[], R=[];
+  const hw=u=>{ for(let i=1;i<prof.length;i++) if(u<=prof[i][0]){ const a=prof[i-1], b=prof[i], t=(u-a[0])/(b[0]-a[0]); return a[1]+(b[1]-a[1])*t; } return 0; };
+  for(let i=0;i<=N;i++){ const u=i/N, z=(z0+(z1-z0)*u)*k, w=Math.max(0.004,hw(u))*k*sc; L.push(new THREE.Vector2(-w,z)); R.push(new THREE.Vector2(w,z)); }
+  return new THREE.Shape(R.concat(L.reverse())); }
+function shoeParts(k){
+  const sph=new THREE.SphereGeometry(1,14,10), box=new THREE.BoxGeometry(1,1,1), cyl=new THREE.CylinderGeometry(1,0.8,1,6), tor=new THREE.TorusGeometry(1,0.3,6,14);
+  const sole=new THREE.ExtrudeGeometry(footOutline(k,1.06),{depth:0.012*k,bevelEnabled:true,bevelThickness:0.004*k,bevelSize:0.004*k,bevelSegments:2,curveSegments:4});
+  sole.rotateX(Math.PI/2); sole.translate(0,-0.062*k,0);
+  const U=[]; U.push([sph,_M(0,-0.046*k,-0.046*k,0,0.043*k,0.037*k,0.045*k)]);
+  U.push([sph,_M(0,-0.044*k,0.035*k,0,0.046*k,0.034*k,0.105*k)]);
+  U.push([sph,_M(0,-0.056*k,0.138*k,0,0.044*k,0.024*k,0.058*k)]);
+  U.push([sph,_M(0,-0.018*k,0.045*k,-0.45,0.032*k,0.022*k,0.062*k)]);
+  U.push([tor,_M(0,-0.006*k,-0.018*k,Math.PI/2,0.036*k,0.036*k,0.036*k)]);
+  const T=[]; [-1,1].forEach(sd=>{ T.push([box,_M(sd*0.045*k,-0.046*k,0.02*k,0.5,0.005*k,0.011*k,0.085*k)]); T.push([box,_M(sd*0.044*k,-0.058*k,0.075*k,-0.2,0.005*k,0.009*k,0.06*k)]); });
+  for(let i=0;i<4;i++){ const z=(0.012+i*0.024)*k; T.push([box,_M(0,-0.0005*k-0.0062*k*i+0.004*k,z,-0.45,0.042*k,0.004*k,0.007*k)]); }
+  const S=[]; [[-0.028,-0.06],[0.028,-0.06],[0,-0.02],[-0.03,0.07],[0.03,0.07],[-0.03,0.13],[0.03,0.13],[0,0.17]].forEach(([x,z])=>S.push([cyl,_M(x*k,-0.082*k,z*k,Math.PI,0.0065*k,0.012*k,0.0065*k)]));
+  return {upper:mergeParts(U),sole:mergeParts([[sole,new THREE.Matrix4()]]),trim:mergeParts(T),spikes:mergeParts(S)};
+}
+function shoeGeo(k){ const p=shoeParts(k); return mergeParts([[p.upper,new THREE.Matrix4()],[p.sole,new THREE.Matrix4()]]); }
+const SHOE=shoeParts(1);
 const GEO={
   pelvis:new THREE.CylinderGeometry(0.15,0.15,0.2,14),
   neck:new THREE.CylinderGeometry(0.05,0.056,0.12,10),
@@ -2147,7 +2167,8 @@ function makePlayer(p,T,kitSide,opt){
     const socks=lk.highSocks?M(kit.sleeve):M(kit.pants);
     mesh(GEO.shin,socks,f[s+'Knee'],0,-0.22,0,sh).scale.set(.8+w*.2,1,.8+w*.2);
     mesh(GEO.jointS,M(kit.pants),f[s+'Knee'],0,0,0,sh).scale.setScalar(1.2*(.8+w*.2));
-    mesh(GEO.foot,M('#16161c'),f[s+'Ank'],0,0.02,0,sh);
+    { const ank=f[s+'Ank']; mesh(SHOE.upper,M('#16161c',{roughness:.45}),ank,0,0.02,0,sh); mesh(SHOE.sole,M('#E9E9EC',{roughness:.6}),ank,0,0.02,0,sh);
+      mesh(SHOE.trim,M(kit.word==='#FFFFFF'||kit.word==='#ffffff'?kit.pc:kit.word,{roughness:.4}),ank,0,0.02,0,false); mesh(SHOE.spikes,M('#3a3a42',{metalness:.5,roughness:.4}),ank,0,0.02,0,false); }
   });
   if(opt.glove!==false&&!opt.helmet){ const gh=f.throwsL?f.rHand:f.lHand; const gl=mesh(GEO.glove,M('#5A3418',{roughness:.55}),gh,0,-0.05,0.02,sh); gl.scale.set(1,1.15,.55); f.glove=gl; f.gloveHand=gh; }
   return f;
@@ -3816,13 +3837,13 @@ function startTrot(pl,done){
   bf.root.visible=true; bf.root.position.set(0.3,0,0); setMode(bf,'trot',0.1);
   setFace(bf,'shout');
   // his own gestures: one leaving first, one between second and third, one rounding third
-  const pool=['fist','sky','dugout','arrow','chest','helmet','salute','clap'], h=hashStr(bf.p.id); const acts=[pool[h%8],pool[(h>>3)%8],pool[(h>>6)%8]];
+  const pool=['fist','sky','dugout','arrow','chest','helmet','salute','clap'], h=hashStr(bf.p.id); const acts=[pool[h%8],pool[(h>>3)%8],pool[(h>>6)%8],pool[(h>>9)%8]];
   // a jogger's line: wide around each bag (it still touches it), not corner to corner
   const curve=new THREE.CatmullRomCurve3([new V3(0.3,0,0),new V3(10.5,0,-8.6),BASES[1].clone(),new V3(10.2,0,-30.2),BASES[2].clone(),new V3(-10.2,0,-30.2),BASES[3].clone(),new V3(-10.5,0,-8.6),new V3(0,0,0.25)],false,'centripetal');
   const L=curve.getLength(), baseS=[1,2,3].map(b=>{ let best=0,bd=1e9; for(let i=0;i<=400;i++){ const p=curve.getPointAt(i/400), d=p.distanceTo(BASES[b]); if(d<bd){ bd=d; best=i/400*L; } } return best; });
   const coach=(p,x,z)=>{ const c=figFor(p,T,side,'coach'); placeFig(c,x,z,faceYaw(x,z,0,-19.4)); c.from=null; c.spr=null; c.mode='coach'; return c; };
   const coaches=[coach(T.pitchers[1],23.6,-14.4),coach(T.pitchers[2],-23.6,-14.4)];
-  G.trot={acts,act:null,t:0,fig:bf,curve,L,baseS,s:0,passed:0,speed:FAST()?12:10.2,mates,coaches,done,arrive:null};
+  G.trot={acts,act:null,t:0,fig:bf,curve,L,baseS,s:0,passed:0,speed:FAST()?10.5:8.8,mates,coaches,done,arrive:null};
   G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0); if(userBatting()) G.waveT=G.clock+1500;
   setMood('jump',12000); G.fwT=Math.max(G.fwT,5);
   if(userBatting()) leaderShout(fillT(SHOUT_T.trot,{n:curBatter().short}),true);
@@ -3832,9 +3853,10 @@ function updateTrot(dt){
   if(Tr.arrive==null){
     // he admires it for a moment, eases into a jog, slows for the coaches and for his gesture
     const t=Tr.t/1000, start=t<1.1?0.18:t<2.0?lerp(0.18,1,(t-1.1)/0.9):1;
-    const nearCoach=Tr.coaches.some(c=>c.root.position.distanceTo(f.root.position)<5), acting=Tr.act&&Tr.t-Tr.act.t0<900;
+    const nearCoach=Tr.coaches.some(c=>c.root.position.distanceTo(f.root.position)<5), acting=Tr.act&&Tr.t-Tr.act.t0<1400;
     Tr.s+=Tr.speed*dt/1000*start*(nearCoach?0.7:acting?0.8:1)*(Tr.s>Tr.L-4?0.75:1);
-    while(Tr.passed<3&&Tr.s>=Tr.baseS[Tr.passed]){ Tr.act={type:Tr.acts[Tr.passed],t0:Tr.t}; Tr.passed++; sfx('cheer'); }
+    while(Tr.passed<3&&Tr.s>=Tr.baseS[Tr.passed]){ Tr.act={type:Tr.acts[Tr.passed],t0:Tr.t}; Tr.skip=Tr.t; Tr.passed++; sfx('cheer'); setFace(f,Tr.passed%2?'happy':'shout'); }
+    if(Tr.passed===3&&!Tr.act4&&Tr.s>=(Tr.baseS[2]+Tr.L)/2){ Tr.act4=true; Tr.act={type:Tr.acts[3],t0:Tr.t}; sfx('roar'); setFace(f,'shout'); }
     if(Tr.s>=Tr.L){ Tr.arrive=Tr.t; f.root.position.set(0,0,0.25); f.yaw=faceYaw(0,0,Tr.mates.length?Tr.mates[0].root.position.x:0,2); sfx('roar'); popup('歡迎回家！',{color:batTeam().hud,size:48,y:300,dur:1500}); }
     else { const u=Tr.s/Tr.L, p=Tr.curve.getPointAt(u), q=Tr.curve.getPointAt(Math.min(1,u+0.004)); f.root.position.set(p.x,0,p.z); f.yaw=t<1.1?faceYaw(p.x,p.z,8,-60):faceYaw(p.x,p.z,q.x,q.z); }
   }
@@ -3846,10 +3868,19 @@ function trotFigures(dt){
   if(Tr.arrive==null){
     const t=Tr.t/1000; f.noSpring=false;
     // a home-run jog: upright, shorter stride, arms low; a walk while he watches it go
-    f.runPh=(f.runPh||0)+dt*(t<1.1?6:9.5); let p=t<1.1?WALK(f.runPh):lp(STAND,runPose(f.runPh,0.05),0.62);
+    // a proud, bouncy run: the stride keeps time with the ground he covers (about 2.9 m a cycle), chest up, looking at the stands
+    const ramp=t<1.1?0:clamp((t-1.1)/0.9,0,1), spd=Tr.speed*(0.18+0.82*ramp);
+    f.runPh=(f.runPh||0)+dt*(t<1.1?6:Math.max(7,spd/2.9*Math.PI*2));
+    let p=t<1.1?WALK(f.runPh):runPose(f.runPh,0.1);
     if(t<1.1) Object.assign(p,{hd:[-0.35,0,0]});
+    else { const look=Math.sin(Tr.t/1000*1.3)*0.55; p.hd=[-0.05,look,0]; p.hy=(p.hy||0)+0.03;
+      p.lift=(p.lift||0)+Math.abs(Math.sin(f.runPh))*0.05; }
+    // a skip as he touches each bag
+    if(Tr.skip!=null){ const k=(Tr.t-Tr.skip)/1000; if(k<0.45) p.lift=(p.lift||0)+Math.sin(k/0.45*Math.PI)*0.22; }
     const A=Tr.act, u=A?(Tr.t-A.t0)/1000:9, pump=Math.abs(Math.sin(u*Math.PI*4));
-    if(A&&u<0.9){
+    // between flourishes: a fist pumped at the crowd every few strides
+    if((!A||u>=1.4)&&t>2.2&&Math.sin(Tr.t/1000*2.1)>0.75) Object.assign(p,{rh:[-0.18,1.62+0.35*Math.abs(Math.sin(Tr.t/1000*9)),0.3],re:[-0.6,1.35,0]});
+    if(A&&u<1.4){
       if(A.type==='fist') Object.assign(p,{rh:[-0.15,1.55+pump*0.5,0.35],re:[-0.6,1.3,0]});
       else if(A.type==='sky') Object.assign(p,CELEB_ARMS.sky);
       else if(A.type==='dugout') Object.assign(p,{rh:[-0.55,1.5,0.5],re:[-0.5,1.4,0.3],hd:[-0.1,-0.4,0]});
@@ -5023,40 +5054,59 @@ function drawCeremony(){
 const RJ={great:70,good:140,ok:200};
 // rhythm time follows the band: milliseconds since the lucky song's first beat, as heard
 function lkT(){ const c=AU.ctx; if(c&&MUS.cur&&MUS.cur.key==='lucky') return (c.currentTime-(c.outputLatency||0)-MUS.cur.t0)*1000; return G.t-60; }
-const APPROACH=900; let NOTE_R=40;
-function buildChart(bpm,lead,T){
-  const beat=60000/bpm, notes=[]; let pos={x:LAYOUT.land&&LAYOUT.fieldSrc?LAYOUT.fieldSrc.x+LAYOUT.fieldSrc.w*0.3:270,y:400}, ang=-0.6, num=1;
-  const F=LAYOUT.fieldSrc, A=LAYOUT.land&&F?{x0:F.x+F.w*0.2,x1:F.x+F.w*0.8,y0:FT+110,y1:FB-110}:{x0:80,x1:460,y0:FT+110,y1:FB-120}, sc=NOTE_R/40;
-  const nextPos=d=>{ ang+=(rnd()-.5)*2.0; let x=pos.x+Math.cos(ang)*d, y=pos.y+Math.sin(ang)*d;
-    if(x<A.x0||x>A.x1){ ang=Math.PI-ang; x=clamp(x,A.x0,A.x1); } if(y<A.y0||y>A.y1){ ang=-ang; y=clamp(y,A.y0,A.y1); }
-    pos={x,y}; return {x,y}; };
+const APPROACH=1150; let NOTE_R=40;
+// Each game gets its own chart: a seeded run of eight-beat phrases, never faster than one note per beat
+// (a quick pair at most), and every note on the other half of the screen from the one before it,
+// so the finger still on the last note never covers the next.
+const LK_PHRASES=[
+  [['tap',0],['tap',2],['tap',4],['tap',6]],
+  [['tap',0],['tap',1],['tap',2],['hold',4,2]],
+  [['tap',0],['tap',2],['swipe',4,'r'],['swipe',6,'l']],
+  [['slide',0,2],['tap',4],['tap',5],['tap',6]],
+  [['tap',0],['tap',0.5],['tap',2],['tap',4],['tap',4.5],['tap',6]],
+  [['hold',0,1.5],['tap',3],['slide',4,2]],
+  [['swipe',0,'u'],['tap',2],['swipe',4,'d'],['tap',6]],
+  [['tap',0],['tap',1],['tap',2],['tap',3],['swipe',4,'u'],['tap',6]],
+  [['slide',0,2],['slide',4,2]],
+  [['tap',0],['hold',2,1.5],['tap',5],['tap',6]],
+];
+function buildChart(bpm,lead,T,seed){
+  const r=seeded(seed||1), beat=60000/bpm, notes=[]; let num=1, side=r()<.5?0:1;
+  const F=LAYOUT.fieldSrc, A=LAYOUT.land&&F?{x0:F.x+F.w*0.18,x1:F.x+F.w*0.82,y0:FT+110,y1:FB-110}:{x0:80,x1:460,y0:FT+110,y1:FB-130}, sc=NOTE_R/40;
+  const mid=(A.x0+A.x1)/2;
+  // alternate halves; within a half, wander a little in height
+  let lastY=(A.y0+A.y1)/2;
+  const nextPos=()=>{ side=1-side; const x0=side?mid+50*sc:A.x0, x1=side?A.x1:mid-50*sc;
+    const x=x0+r()*(x1-x0); let y=lastY+(r()-.5)*260; y=clamp(y,A.y0,A.y1); lastY=y; return {x,y}; };
   const n=T.name, words=[n[0],n[1],'加','油','衝','啊','嘿','喔','全','壘','打'];
   let wi=0; const lab=()=>words[(wi++)%words.length];
   const T_=b=>lead+b*beat;
-  const tap=b=>{ const p=nextPos(95*sc); notes.push({type:'tap',t:T_(b),x:p.x,y:p.y,num:num++,label:lab()}); };
-  const hold=(b,len)=>{ const p=nextPos(100*sc); notes.push({type:'hold',t:T_(b),dur:len*beat,x:p.x,y:p.y,num:num++,label:'長按'}); };
-  const slide=(b,len)=>{ const a=nextPos(95*sc), sx=a.x, sy=a.y, e=nextPos(190*sc), m={x:(sx+e.x)/2+(rnd()-.5)*150*sc,y:(sy+e.y)/2+(rnd()-.5)*140};
-    notes.push({type:'slide',t:T_(b),dur:len*beat,x:sx,y:sy,ex:e.x,ey:e.y,cx:clamp(m.x,A.x0,A.x1),cy:clamp(m.y,A.y0,A.y1),num:num++,label:'滑'}); };
-  const mash=(b,len,need)=>notes.push({type:'mash',t:T_(b),dur:len*beat,x:270,y:(FT+FB)/2+10,need,num:num++,label:'連打'});
-  const swipe=(b,dir)=>{ const p=nextPos(95*sc); notes.push({type:'swipe',t:T_(b),x:p.x,y:p.y,dir,num:num++,label:''}); };
-  [0,1,2,3].forEach(tap);
-  [4,5,6,6.5,7].forEach(tap);
-  hold(8,2); tap(10); tap(11);
-  swipe(12,'r'); swipe(13,'l'); tap(14); tap(14.5); tap(15);
-  slide(16,2); slide(18,2);
-  [20,20.5,21,22,23].forEach(tap);
-  mash(24,4,12);
-  swipe(28,'u'); swipe(29,'d'); hold(30,1.5);
-  slide(32,2); tap(34); tap(35);
-  [36,36.5,37,37.5].forEach(tap); swipe(38,'u'); tap(39);
-  return {notes,end:T_(40)+400};
+  const add={
+    tap:b=>{ const p=nextPos(); notes.push({type:'tap',t:T_(b),x:p.x,y:p.y,num:num++,label:lab()}); },
+    hold:(b,len)=>{ const p=nextPos(); notes.push({type:'hold',t:T_(b),dur:len*beat,x:p.x,y:p.y,num:num++,label:'長按'}); },
+    slide:(b,len)=>{ const a=nextPos(), e={x:clamp(a.x+(side?-1:1)*(120+r()*80)*sc,A.x0,A.x1),y:clamp(a.y+(r()-.5)*220,A.y0,A.y1)};
+      notes.push({type:'slide',t:T_(b),dur:len*beat,x:a.x,y:a.y,ex:e.x,ey:e.y,cx:clamp((a.x+e.x)/2+(r()-.5)*120*sc,A.x0,A.x1),cy:clamp((a.y+e.y)/2+(r()-.5)*120,A.y0,A.y1),num:num++,label:'滑'}); },
+    swipe:(b,dir)=>{ const p=nextPos(); notes.push({type:'swipe',t:T_(b),x:p.x,y:p.y,dir,num:num++,label:''}); },
+    mash:(b,len,need)=>notes.push({type:'mash',t:T_(b),dur:len*beat,x:(A.x0+A.x1)/2,y:(FT+FB)/2+10,need,num:num++,label:'連打'}),
+  };
+  // two easy phrases to start, the rally of mashing in the middle, a big finish
+  const order=[0,r()<.5?1:2]; while(order.length<5){ const k=2+Math.floor(r()*(LK_PHRASES.length-2)); if(order[order.length-1]!==k) order.push(k); }
+  let bar=0;
+  order.slice(0,3).forEach(k=>{ LK_PHRASES[k].forEach(([ty,b,x])=>add[ty](bar+b,x)); bar+=8; });
+  add.mash(bar,4,10+Math.floor(r()*4)); bar+=6;
+  order.slice(3).forEach(k=>{ LK_PHRASES[k].forEach(([ty,b,x])=>add[ty](bar+b,x)); bar+=8; });
+  add.tap(bar); add.tap(bar+1); add.swipe(bar+2,'u');
+  return {notes,end:T_(bar+4)+400};
 }
 const DIRV={r:[1,0],l:[-1,0],u:[0,-1],d:[0,1]};
 function slidePos(n,u){ u=clamp(u,0,1); const a=1-u; return {x:a*a*n.x+2*a*u*n.cx+u*u*n.ex,y:a*a*n.y+2*a*u*n.cy+u*u*n.ey}; }
 function startLucky(){
   const T=G.home; NOTE_R=LAYOUT.land?54:40;
-  const ch=buildChart(132,4*60000/132,T);
-  G.lk={notes:ch.notes,end:ch.end,score:0,combo:0,maxCombo:0,counts:{great:0,good:0,ok:0,miss:0},fx:[],parts:[],rings:[],shake:0,lead:4*60000/132,down:false,px:0,py:0,done:false,
+  // every game a different number: tempo, groove and chart
+  const v=Math.floor(rnd()*1e6), bpm=[120,126,132,138,144][v%5];
+  G.lkVar={id:'v'+v,v,bpm};
+  const ch=buildChart(bpm,4*60000/bpm,T,v+7);
+  G.lk={notes:ch.notes,end:ch.end,score:0,combo:0,maxCombo:0,counts:{great:0,good:0,ok:0,miss:0},fx:[],parts:[],rings:[],shake:0,lead:4*60000/bpm,down:false,px:0,py:0,done:false,
     win:G.passive&&G.passive.rhythm?1.4:1};
   G.phase='lucky'; G.t=0; G.waveT=G.clock;
   setMarquee(`幸運七局！　全場起立　${T.call}`); setMood('skill',99999);
@@ -5177,6 +5227,10 @@ function drawLucky(){
   if(L.combo>1) txt(`${L.combo} COMBO`,W-20,FT+54,16,'#FFD54A',{a:'right',d:1,w:400,stroke:3,sc:'#07081A'});
   if(t<L.lead){ txt('跟著鼓點！',270,FT+150,30,'#fff',{stroke:6,sc:'#07081A'}); txt('點擊・長按・滑動・連打・甩動',270,FT+190,15,hud,{stroke:4,sc:'#07081A',w:700}); }
   const vis=L.notes.filter(n=>!n.res&&t>=n.t-APPROACH&&(t<=n.t+(n.dur||0)+RJ.ok*L.win)).sort((a,b)=>b.t-a.t);
+  { const up=vis.slice().sort((a,b)=>a.t-b.t); ctx.save(); ctx.setLineDash([6,9]); ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.55)';
+    for(let i=0;i+1<up.length;i++){ const a=up[i], b=up[i+1], ax=a.type==='slide'?a.ex:a.x, ay=a.type==='slide'?a.ey:a.y; ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+    ctx.restore();
+    const nx=up.find(n=>t<n.t-120); if(nx){ const k=clamp((nx.t-t)/APPROACH,0,1); ctx.save(); ctx.globalAlpha=0.35+0.4*(1-k); txt('下一個',nx.x,nx.y-NOTE_R-16,13,'#fff',{stroke:3,sc:'#07081A',w:700}); ctx.restore(); } }
   for(const n of vis){
     const k=clamp((n.t-t)/APPROACH,0,1), fade=clamp(1-k*1.3+.3,0,1);
     ctx.globalAlpha=fade;
@@ -5861,7 +5915,7 @@ function musicMode(){
   if(G.phase==='trot') return {key:'trot'+batTeam().id,song:songFor('win',null,batTeam()),vol:1};
   if(G.show&&G.show.big) return {key:'closer'+G.show.T.id,song:songFor('closer',null,G.show.T),vol:1};
   if(G.show||G.phase==='play'||G.phase==='replay') return null;
-  if(G.phase==='lucky'||(G.phase==='wait'&&G.lk)) return {key:'lucky',song:songFor('lucky',null,H),vol:1};
+  if(G.phase==='lucky'||(G.phase==='wait'&&G.lk)) return {key:'lucky',song:songFor('lucky',G.lkVar||null,H),vol:1};
   const c=G.cut;
   if(c&&c.type==='show') return null;
   if(c&&c.type==='kdance'){ const T=c.data.side==='away'?A:H; return {key:'k'+T.id,song:songFor('k',null,T),vol:1}; }
@@ -5952,7 +6006,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011015933', box=document.getElementById('upd');
+  const BUILD='20261011021229', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
