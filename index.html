@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.24（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.25（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.24（2026.10.11）</div>
+    <div class="ver">版本 2.25（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2066,17 +2066,24 @@ function capTex(T,kit){
 /* ---------- baseball player ---------- */
 // faces: brows, eyes and mouth reshape for an emotion
 const FACES={
-  neutral:{by:0.19,br:0.12,ey:0.7,mx:1,my:1,mo:0.105},
-  happy:{by:0.197,br:0.05,ey:0.38,mx:1.8,my:3,mo:0.1},
-  shout:{by:0.2,br:-0.05,ey:0.85,mx:1.35,my:5.5,mo:0.094},
-  angry:{by:0.181,br:-0.5,ey:0.42,mx:1.25,my:1.3,mo:0.1},
-  sad:{by:0.186,br:0.5,ey:0.5,mx:0.75,my:1,mo:0.098},
+  neutral:{by:0.172,br:0.12,ey:0.7,mx:1,my:1,mo:0.095},
+  happy:{by:0.179,br:0.05,ey:0.38,mx:1.8,my:3,mo:0.09},
+  shout:{by:0.182,br:-0.05,ey:0.85,mx:1.35,my:5.5,mo:0.084},
+  angry:{by:0.163,br:-0.5,ey:0.42,mx:1.25,my:1.3,mo:0.09},
+  sad:{by:0.168,br:0.5,ey:0.5,mx:0.75,my:1,mo:0.088},
 };
 function setFace(f,e){
   if(!f||!f.face||f.face.cur===e) return; const F=FACES[e]||FACES.neutral; f.face.cur=e;
   f.face.brows.forEach(b=>{ b.position.y=F.by; b.rotation.z=-b.userData.s*F.br; });
   f.face.eyes.forEach(m=>m.scale.y=F.ey); f.face.iris.forEach(m=>m.scale.y=Math.max(0.4,F.ey/0.7));
   f.face.mouth.scale.set(F.mx,F.my,1); f.face.mouth.position.y=F.mo;
+}
+let BLOB_MAT=null;
+function contactBlob(parent){
+  if(!BLOB_MAT){ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'), rg=g.createRadialGradient(32,32,0,32,32,32);
+    rg.addColorStop(0,'rgba(0,0,0,.62)'); rg.addColorStop(.55,'rgba(0,0,0,.3)'); rg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=rg; g.fillRect(0,0,64,64);
+    BLOB_MAT=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,toneMapped:false}); }
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.95,0.95).rotateX(-Math.PI/2),BLOB_MAT); m.position.y=0.015; m.renderOrder=1; parent.add(m); return m;
 }
 function makePlayer(p,T,kitSide,opt){
   opt=opt||{};
@@ -2086,6 +2093,7 @@ function makePlayer(p,T,kitSide,opt){
   const w=lk.build?lk.build[1]:1, h=lk.build?lk.build[0]:1;
   f.root.scale.setScalar(0.99*(1+(h-1)*0.6));  // ~1.81 m for an average build; big men a little taller
   f.head.position.y=0.095; f.head.scale.set(.8,1,.92);
+  f.blob=contactBlob(f.root);
   const torso=mesh(lathe([[.13,0],[.142,.08],[.152,.2],[.168,.33],[.176,.42],[.15,.49],[.06,.52]]),new THREE.MeshStandardMaterial({map:jerseyTex(T,kit,p),roughness:.75}),f.spine,0,0,0,sh);
   torso.scale.set(w*1.08,1,w*(w>1.1?1.04:.9));
   const trap=mesh(new THREE.CylinderGeometry(0.075,0.17,0.07,20),M(kit.base),f.spine,0,0.49,0,sh); trap.scale.set(w,1,0.62*w);
@@ -2096,20 +2104,23 @@ function makePlayer(p,T,kitSide,opt){
   f.face={eyes:[],iris:[],brows:[],mouth:null,cur:'neutral'};
   [-1,1].forEach(s=>{
     mesh(GEO.ear,skin,f.head,s*0.11,0.15,0,false);
-    f.face.eyes.push(mesh(GEO.eyeW,M('#F4F4F4'),f.head,s*0.038,0.165,0.098,false)); f.face.eyes[f.face.eyes.length-1].scale.set(1,.7,.5);
-    f.face.iris.push(mesh(GEO.iris,M('#2A1C14'),f.head,s*0.038,0.165,0.106,false));
-    const br=mesh(GEO.brow,M(lk.hairC||'#1a1a1a'),f.head,s*0.038,0.19,0.104,false); br.rotation.z=-s*0.12; br.userData.s=s; f.face.brows.push(br);
-    if(lk.eyeBlack) mesh(GEO.eyeBlack,M('#111111'),f.head,s*0.04,0.137,0.108,false);
+    // eyes sit just proud of the face sphere (it bulges to z~.107 here), with a catchlight and an upper-lid line
+    f.face.eyes.push(mesh(GEO.eyeW,M('#F4F4F4'),f.head,s*0.038,0.148,0.104,false)); f.face.eyes[f.face.eyes.length-1].scale.set(1.2,.82,.55);
+    const ir=mesh(GEO.iris,M('#2A1C14'),f.head,s*0.038,0.147,0.1085,false); ir.scale.set(1.1,1.1,.6); f.face.iris.push(ir);
+    mesh(GEO.dot,M('#FFFFFF',{emissive:'#FFFFFF',emissiveIntensity:.8}),ir,s*0.003,0.004,0.0105,false);
+    const lid=mesh(GEO.brow,M('#24160F'),f.head,s*0.038,0.1595,0.1095,false); lid.scale.set(1.05,.45,.5); lid.rotation.z=s*0.1;
+    const br=mesh(GEO.brow,M(lk.hairC||'#1a1a1a'),f.head,s*0.038,0.174,0.107,false); br.rotation.z=-s*0.12; br.userData.s=s; f.face.brows.push(br);
+    if(lk.eyeBlack) mesh(GEO.eyeBlack,M('#111111'),f.head,s*0.04,0.124,0.108,false);
   });
-  mesh(GEO.nose,skin,f.head,0,0.14,0.115,false).scale.set(1,1.3,1);
-  f.face.mouth=mesh(GEO.mouth,M('#7A3B32'),f.head,0,0.105,0.108,false);
+  mesh(GEO.nose,skin,f.head,0,0.127,0.114,false).scale.set(1,1.3,1);
+  f.face.mouth=mesh(GEO.mouth,M('#7A3B32'),f.head,0,0.095,0.106,false);
   const bc=lk.beardC||lk.hairC||'#1a1a1a';
-  if(lk.beard==='full'){ const b=mesh(GEO.beardFull,M(bc,{roughness:1}),f.head,0,0.15,0.004,false); b.scale.set(1,1.08,1.05); mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.12,0.112,false); }
+  if(lk.beard==='full'){ const b=mesh(GEO.beardFull,M(bc,{roughness:1}),f.head,0,0.15,0.004,false); b.scale.set(1,1.08,1.05); mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.109,0.11,false); }
   if(lk.beard==='stubble'){ const b=mesh(GEO.beardFull,M(bc,{roughness:1,transparent:true,opacity:.42}),f.head,0,0.15,0.001,false); b.scale.set(.99,1.06,1.03); }
-  if(lk.beard==='goatee'){ mesh(GEO.goatee,M(bc,{roughness:1}),f.head,0,0.075,0.09,false).scale.set(1,1.3,.7); mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.12,0.11,false).scale.set(.8,1,1); }
-  if(lk.beard==='mustache') mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.12,0.112,false);
-  if(lk.goggles){ [-1,1].forEach(s=>mesh(GEO.lens,M('#C0C8D8',{metalness:.9,roughness:.15}),f.head,s*0.038,0.165,0.112,false)); }
-  if(lk.sunglasses) mesh(GEO.shade,M('#0A0A0F',{metalness:.6,roughness:.15}),f.head,0,0.166,0.112,false);
+  if(lk.beard==='goatee'){ mesh(GEO.goatee,M(bc,{roughness:1}),f.head,0,0.075,0.09,false).scale.set(1,1.3,.7); mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.109,0.109,false).scale.set(.8,1,1); }
+  if(lk.beard==='mustache') mesh(GEO.stache,M(bc,{roughness:1}),f.head,0,0.109,0.11,false);
+  if(lk.goggles){ [-1,1].forEach(s=>mesh(GEO.lens,M('#C0C8D8',{metalness:.9,roughness:.15}),f.head,s*0.038,0.148,0.113,false)); }
+  if(lk.sunglasses) mesh(GEO.shade,M('#0A0A0F',{metalness:.6,roughness:.15}),f.head,0,0.149,0.113,false);
   const hc=M(lk.hairC||'#1a1a1a',{roughness:.95});
   if(lk.hair==='long'||lk.hair==='mullet'){ const hb=mesh(GEO.hairBall,hc,f.head,0,0.08,-0.07,false); hb.scale.set(1.08,lk.hair==='long'?1.7:1.2,.6); }
   if(lk.hair==='curly'){ for(let i=0;i<7;i++){ const a=i/6*Math.PI-Math.PI/2; mesh(GEO.goatee,hc,f.head,Math.sin(a)*0.1,0.12+Math.cos(i)*0.02,-0.06-Math.cos(a)*0.04,false); } }
@@ -4288,7 +4299,18 @@ function headWorld(f,dy){ const v=new V3(); f.head.getWorldPosition(v); v.y+=(dy
 function updateCamera(dt){
   G.camT+=dt;
   updateCamera2(dt);
+  shadowFocus();
   if(G.shake>0.002){ cam.position.x+=(rnd()-.5)*G.shake; cam.position.y+=(rnd()-.5)*G.shake; cam.position.z+=(rnd()-.5)*G.shake*0.5; }
+}
+const _sf=new V3(), _sd=new V3();
+function shadowFocus(){
+  const K=S3.lights&&S3.lights.key; if(!K) return;
+  cam.getWorldDirection(_sd); let ext=45; _sf.set(0,0,-20);
+  if(_sd.y<-0.03){ const d=Math.min(70,cam.position.y/-_sd.y); _sf.copy(cam.position).addScaledVector(_sd,d); _sf.y=0; ext=clamp(d*0.75,9,45); }
+  else if(cam.position.distanceTo(_sf)>0&&cam.position.y<6){ _sd.y=0; _sd.normalize(); _sf.copy(cam.position).addScaledVector(_sd,12); _sf.y=0; ext=14; }
+  ext=Math.ceil(ext/3)*3; const tx=ext*2/K.shadow.mapSize.x; _sf.x=Math.round(_sf.x/tx)*tx; _sf.z=Math.round(_sf.z/tx)*tx;
+  K.target.position.copy(_sf); K.position.set(_sf.x-35,70,_sf.z+50);
+  const sc=K.shadow.camera; if(sc.right!==ext){ sc.left=-ext; sc.right=ext; sc.top=ext; sc.bottom=-ext; sc.updateProjectionMatrix(); }
 }
 function updateCamera2(dt){
   const L=S3.lights;
@@ -5930,7 +5952,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011015409', box=document.getElementById('upd');
+  const BUILD='20261011015933', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
