@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.4（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.5（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.4（2026.10.11）</div>
+    <div class="ver">版本 2.20.5（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2358,6 +2358,18 @@ const PK=[
   [1.00,P({hx:0.88,hy:-0.34,hr:[0,1.5,0],sp:[0.82,0.5,0],lf:[1.32,.08,.06],lk:[1.0,0.6,0.4],rf:[0.42,0.42,-0.3],rk:[0.6,0.5,0],lh:[0.88,0.98,-0.24],le:[1.1,1.1,-0.5],rh:[1.05,0.6,-0.42],re:[1.0,1.2,0.4],hd:[0,0.3,0]})],
 ];
 const PK_L=PK.map(([t,p])=>[t,mirrorPose(p)]);
+// every pitcher has his own delivery: arm slot (over the top, three-quarters, sidearm) and leg kick (high, normal, slide step)
+function pitchKeys(p){
+  if(p._pk) return p._pk;
+  const h=hashStr(p.id||p.name||'x'), slot=['over','over','three','three','over','side','three','over'][h%8], kick=p.role==='CL'?'high':['normal','high','normal','slide','normal','high'][(h>>>4)%6];
+  const keys=PK.map(([t,q],i)=>{ const o=JSON.parse(JSON.stringify(q));
+    if(i===1){ if(kick==='high'){ o.lf=[o.lf[0],0.9,0.22]; o.lk=[o.lk[0],1.42,0.9]; o.sp=[o.sp[0]-0.05,o.sp[1],o.sp[2]]; } if(kick==='slide'){ o.lf=[o.lf[0]+0.15,0.26,0.1]; o.lk=[o.lk[0]+0.1,0.75,1.0]; } }
+    if(i>=3&&i<=5){ const d=slot==='side'?0.52:slot==='three'?0.24:0, w=slot==='side'?0.38:slot==='three'?0.16:0;
+      o.rh=[o.rh[0]-w,o.rh[1]-d,o.rh[2]]; o.re=[o.re[0]-w*1.2,o.re[1]-d*0.8,o.re[2]];
+      o.sp=[o.sp[0]-(slot==='side'?0.12:0),o.sp[1],o.sp[2]+(slot==='side'?0.3:slot==='three'?0.12:0)]; }
+    return [t,P(o)]; });
+  p._pk={R:keys,L:keys.map(([t,q])=>[t,mirrorPose(q)]),slot,kick}; return p._pk;
+}
 /* Batter (root-local: +x toward pitcher, +z toward plate, right-handed; lefties are mirrored) */
 function batPose(o){ const g=o.g, d=o.bd, n=Math.hypot(d[0],d[1],d[2]);
   o.lh=[g[0],g[1],g[2]]; o.rh=[g[0]+d[0]/n*0.09,g[1]+d[1]/n*0.09,g[2]+d[2]/n*0.09]; return P(o); }
@@ -3971,7 +3983,7 @@ function closerSig(sig,k,S){
   const p=P({hy:-0.06,lh:[0.85,1.45,0.05],rh:[-0.85,1.45,0.05],le:[0.6,1.45,-0.3],re:[-0.6,1.45,-0.3]}); p.ry=easeOut(Math.min(1,k/1.2))*Math.PI*4; return p;
 }
 function pitcherPose(f){
-  const left=f.p.throws==='L', K=left?PK_L:PK;
+  const left=f.p.throws==='L', pk=pitchKeys(f.p), K=left?pk.L:pk.R;
   if(G.cut&&G.cut.type==='react'&&G.cut.data.f===f){ f.yaw=left?Math.PI/2:-Math.PI/2; const u=Math.min(1,G.cut.t/250); return lp(K[0][1],REACT[G.cut.data.pose],ease(u)); }
   if(G.show&&G.cut&&G.cut.type==='show'){
     const S=G.show, t=S.t/1000, big=S.big, walkA=big?2.2:0, walkB=big?6.2:1.2, to=new V3(0,0.25,-18.39);
@@ -5761,7 +5773,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011000304', box=document.getElementById('upd');
+  const BUILD='20261011000425', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
