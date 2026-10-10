@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.6（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.7（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.6（2026.10.11）</div>
+    <div class="ver">版本 2.20.7（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -3653,15 +3653,16 @@ function updatePlay(dt){
       if(adv<rem){ rn.s+=adv; adv=0; } else { adv-=rem; rn.seg++; rn.s=0; }
     }
     if(rn.seg>=rn.path.length-1){ rn.done=true; const e=rn.path[rn.path.length-1]; f.root.position.set(e.x,0,e.z);
-      if(f.mode==='slide') later(650,()=>{ if(f.mode==='slide') setMode(f,'lead',0.35); }); else setMode(f,'lead',0.3); return; }
+      if(f.mode==='slide'){ slideDust(f,16,true); later(650,()=>{ if(f.mode==='slide') setMode(f,'lead',0.35); }); } else setMode(f,'lead',0.3); return; }
     const a=rn.path[rn.seg], b=rn.path[rn.seg+1], u=rn.s/a.distanceTo(b);
     if(!rn.slid&&rn.seg===rn.path.length-2&&a.distanceTo(b)-rn.s<2.7){
       const bi=BASES.findIndex(q=>q.distanceTo(b)<0.6), thrown=pl.plan.throws.some(x=>x.base===bi);
-      if(bi!==1&&bi>=0&&(thrown||rn.out||(bi===0&&rnd()<.6))){ rn.slid=true; f.slideHead=f.p.spd>.78&&hashStr(f.p.id)%2===0; setMode(f,'slide',0.04); }
+      if(bi!==1&&bi>=0&&(thrown||rn.out||(bi===0&&rnd()<.6))){ rn.slid=true; rn.dustT=0; f.slideHead=f.p.spd>.78&&hashStr(f.p.id)%2===0; setMode(f,'slide',0.04); }
     }
     f.root.position.set(lerp(a.x,b.x,u),0,lerp(a.z,b.z,u));
     f.yaw=faceYaw(a.x,a.z,b.x,b.z);
     if(f.mode!=='run'&&f.mode!=='slide') setMode(f,'run',0.12);
+    if(f.mode==='slide'&&f.mt>0.12&&(rn.dustT=(rn.dustT||0)+dt/1000)>0.045){ rn.dustT=0; slideDust(f,2,false); }
   });
   if(t>=pl.endT){
     G.play=null; G.phase='idle'; if(S3.landMk) S3.landMk.visible=false; if(S3.hrTrail) S3.hrTrail.visible=false;
@@ -3819,14 +3820,23 @@ function updateShow(dt){
     if(t>9.6&&t<9.66) G.flash=1;
   }
 }
-// rosin-bag dust and other puffs of smoke
-function spawnSmoke(p,n){
-  if(!S3.smoke){ S3.smoke=[]; const tex=glowTexture(); for(let i=0;i<48;i++){ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,color:0xffffff,opacity:0})); sp.visible=false; scene.add(sp); S3.smoke.push({sp,life:0,t:0,v:new V3()}); } }
-  for(let k=0;k<n;k++){ const q=S3.smoke.find(q=>q.t>=q.life)||S3.smoke[k%S3.smoke.length]; q.t=0; q.life=1.2+rnd()*0.9; q.sp.position.copy(p).add(new V3((rnd()-.5)*0.12,(rnd()-.2)*0.1,(rnd()-.5)*0.12)); q.v.set((rnd()-.5)*0.5,0.25+rnd()*0.45,(rnd()-.5)*0.5); q.sp.visible=true; }
+// rosin-bag dust and other puffs of smoke; o={color,spread,rise,size,op} turns it into infield dirt kicked up by a slide
+function spawnSmoke(p,n,o){
+  if(!S3.smoke){ S3.smoke=[]; const tex=glowTexture(); for(let i=0;i<96;i++){ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,color:0xffffff,opacity:0})); sp.visible=false; scene.add(sp); S3.smoke.push({sp,life:0,t:0,v:new V3(),sz:1,op:.55}); } }
+  o=o||{}; const sd=o.spread||0.12, sw=o.spread?o.spread*2.2:0.5, rise=o.rise||0.25;
+  for(let k=0;k<n;k++){ const q=S3.smoke.find(q=>q.t>=q.life)||S3.smoke[k%S3.smoke.length]; q.t=0; q.life=(o.color?0.9:1.2)+rnd()*0.9; q.sz=o.size||1; q.op=o.op||0.55;
+    q.sp.material.color.set(o.color||0xffffff); q.sp.position.copy(p).add(new V3((rnd()-.5)*sd,(rnd()-.2)*0.1,(rnd()-.5)*sd));
+    q.v.set((rnd()-.5)*sw,rise+rnd()*rise*1.8,(rnd()-.5)*sw); if(o.push) q.v.addScaledVector(o.push,0.4+rnd()*0.6); q.sp.visible=true; }
 }
 function updateSmoke(dt){
   if(!S3.smoke) return;
-  S3.smoke.forEach(q=>{ if(q.t>=q.life){ q.sp.visible=false; return; } q.t+=dt; const u=q.t/q.life; q.sp.position.addScaledVector(q.v,dt); q.v.multiplyScalar(Math.pow(.4,dt)); const s=0.12+u*0.9; q.sp.scale.set(s,s,1); q.sp.material.opacity=0.55*(1-u); });
+  S3.smoke.forEach(q=>{ if(q.t>=q.life){ q.sp.visible=false; return; } q.t+=dt; const u=q.t/q.life; q.sp.position.addScaledVector(q.v,dt); q.v.multiplyScalar(Math.pow(.4,dt)); const s=(0.12+u*0.9)*q.sz; q.sp.scale.set(s,s,1); q.sp.material.opacity=q.op*(1-u); });
+}
+// the cloud of infield dirt a slide or a dive throws up; wet clay barely puffs in the rain
+function slideDust(f,n,big){
+  const w=G.weather&&WEATHERS[G.weather]&&WEATHERS[G.weather].rain?0.35:1, k=Math.max(1,Math.round(n*w));
+  const p=f.root.position.clone(); p.y=big?0.45:0.3; const fw=new V3(Math.sin(f.yaw||0),0,Math.cos(f.yaw||0));
+  spawnSmoke(p.addScaledVector(fw,big?0.5:0.2),k,{color:'#E2BF92',spread:big?0.9:0.45,rise:big?0.5:0.3,size:big?2.6:1.9,op:0.85*w,push:fw.multiplyScalar(big?2.2:3)});
 }
 
 /* ---------- figure animation ---------- */
@@ -5779,7 +5789,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011000540', box=document.getElementById('upd');
+  const BUILD='20261011005042', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
