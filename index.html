@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.1（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.2（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.1（2026.10.10）</div>
+    <div class="ver">版本 2.20.2（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -4020,9 +4020,15 @@ function updateSquads(dt){
       if(mood==='jump') p=celebratePose(i,bi);
       else p=dancePose(i,bi,routine,st,{lead:f.lead,solo:mood==='skill',amp:f.var.amp,bounce:td.bounce,sway:td.sway});
       f.mt+=dt; applyPose(f,springTo(f,p,dt,f.spring[0],f.spring[1],false,false));
-      f.tails.forEach((tg,k)=>{ tg.rotation.x=0.3+0.3*Math.sin(b*Math.PI*2+i+k); tg.rotation.z=(k?-1:1)*0.15+0.25*Math.sin(b*Math.PI+i); });
-      if(f.skirt) f.skirt.scale.y=1-0.1*Math.abs(Math.sin(b*Math.PI));
-      f.lPom.rotation.y+=dt*4; f.rPom.rotation.y-=dt*4;
+      // secondary motion: hair with inertia, poms that puff on the beat, a skirt that flares on jumps and turns
+      const lp2=f.last||p, hx=lp2.hx||0, lift=lp2.lift||0, ry=lp2.ry||0, ph=f.ph2||(f.ph2={hx,lift,ry,tz:0,tx:0,vz:0,vx:0}), sdt=Math.min(dt,0.05);
+      const vhx=(hx-ph.hx)/Math.max(sdt,1e-3), vl=(lift-ph.lift)/Math.max(sdt,1e-3), vry=(ry-ph.ry)/Math.max(sdt,1e-3); ph.hx=hx; ph.lift=lift; ph.ry=ry;
+      const tz=clamp(-vhx*0.9-vry*0.06,-0.9,0.9), tx=clamp(0.25-vl*0.5+Math.abs(vry)*0.05,-0.4,1.2);
+      ph.vz+=((tz-ph.tz)*60-ph.vz*9)*sdt; ph.tz+=ph.vz*sdt; ph.vx+=((tx-ph.tx)*60-ph.vx*9)*sdt; ph.tx+=ph.vx*sdt;
+      f.tails.forEach((tg,k)=>{ tg.rotation.x=ph.tx; tg.rotation.z=(k?-1:1)*0.15+ph.tz; });
+      const beatF=((bi%1)+1)%1, hit=Math.exp(-beatF*7);
+      if(f.skirt){ const fl=clamp(Math.abs(vry)*0.04+Math.max(0,lift)*0.5,0,0.35); f.skirt.scale.set(1+fl,1-0.08*hit-fl*0.4,1+fl); }
+      f.lPom.rotation.y+=dt*4; f.rPom.rotation.y-=dt*4; f.lPom.scale.setScalar(1+0.22*hit); f.rPom.scale.setScalar(1+0.22*hit);
     });
     const m=Q.mascot; m.mt+=dt; applyPose(m,springTo(m,mascotPose(b,mood==='jump'?'celebrate':'dance'),dt,m.spring[0],m.spring[1],false,false));
     if(m.ring0){ m.ring0.rotation.z+=dt*2; m.ring1.rotation.z-=dt*2.6; m.ring2.rotation.z+=dt*1.7; }
@@ -5723,7 +5729,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010235155', box=document.getElementById('upd');
+  const BUILD='20261010235246', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
