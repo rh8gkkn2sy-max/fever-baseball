@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.11（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.12（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.11（2026.10.10）</div>
+    <div class="ver">版本 2.12（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2587,6 +2587,7 @@ function startCut(type,dur,data,onEnd){ G.phase='cut'; G.cut={type,t:0,dur,data:
 function skipCut(){ if(G.phase==='cut'&&G.cut&&G.cut.skip&&G.cut.t>250){ G.cut.t=G.cut.dur; } }
 
 function newGame(hi,ai,li,diff,attract){
+  if(typeof G!=='undefined'&&G&&G.cer){ cerCleanup(); restoreLights(); }
   if(S3.figRoot) scene.remove(S3.figRoot);
   S3.figRoot=new THREE.Group(); scene.add(S3.figRoot); FIGS={};
   const home=makeTeam(hi,!attract), away=makeTeam(ai,false);
@@ -3258,15 +3259,131 @@ function gameOver(walkoff){
   SAVE.streak=win?(SAVE.streak||0)+1:0; G.streakBonus=win?Math.min(SAVE.streak-1,5)*40:0;
   G.coinsEarned=(win?300:h===a?180:120)+hits*10+G.hrs*30+G.ks*8+G.streakBonus;
   SAVE.coins+=G.coinsEarned; SAVE.games++; if(win) SAVE.wins++; persist();
-  if(G.park&&G.park.kind==='dome') after(2600,startConcert); else setTimeout(showOver,2600);
+  after(2600,startCeremony);
 }
-// the dome's post-game concert: the home squad takes the stage, lights down, lasers and fireworks
-function startConcert(){
-  const T=G.home; G.concert={t:0,T,fw:0};
-  popup('賽後演唱會',{sub:`${T.squad.n}・巨蛋 LIVE`,color:T.hud,size:56,dur:2800,y:260});
-  setMarquee(`巨蛋賽後演唱會　${T.squad.n}　LIVE　·　${T.call}`);
-  startCut('concert',16000,{side:'home'},()=>{ G.concert=null; restoreLights(); G.phase='over'; showOver(); });
+/* =========================================================
+   After the game: the MVP takes a trophy on a stage out on the field, then dances with the
+   winning club's squad. The squad shows a move for a bar, the player answers with a swipe or a
+   tap on the next downbeat. In the Taipei Dome the whole thing becomes a concert.
+   ========================================================= */
+const CER_MOVES=[
+  {g:'L',m:'PT_L',ic:'←',n:'指左邊'},{g:'R',m:'PT_R',ic:'→',n:'指右邊'},
+  {g:'U',m:'HV',ic:'↑',n:'雙手高舉'},{g:'D',m:'PUNCHD',ic:'↓',n:'往下出拳'},{g:'T',m:'CLAPUP',ic:'✋',n:'點一下拍手'}];
+const CER_Z=-24, CER_ROUNDS=6, CER_B={award:8,intro:12,end:12+CER_ROUNDS*8+8};
+function pickMvp(T){
+  let best=null,bs=0;
+  T.lineup.forEach(b=>{ const s=b.h+b.hrG*2+b.rbi*1.5; if(s>bs){ bs=s; best=b; } });
+  if(best) return {p:best,line:`${best.ab} 打數 ${best.h} 安打${best.hrG?`・${best.hrG} 轟`:''}${best.rbi?`・${best.rbi} 分打點`:''}`};
+  const p=T.pitcher||T.pitchers[0]; return {p,line:'投手群壓制全場'};
 }
+function buildCerStage(T){
+  if(!S3.cerStage){
+    const g=new THREE.Group(); S3.cerStage=g; scene.add(g);
+    const M2=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.6},o||{}));
+    const deck=new THREE.Mesh(new THREE.BoxGeometry(11.5,0.5,5.4),M2(0x14182e)); deck.position.y=0.25; g.add(deck);
+    S3.cerTrim=new THREE.MeshBasicMaterial({color:0xffd21f,toneMapped:false});
+    const edge=new THREE.Mesh(new THREE.BoxGeometry(11.6,0.12,0.12),S3.cerTrim); edge.position.set(0,0.46,2.72); g.add(edge);
+    const screen=new THREE.Mesh(new THREE.PlaneGeometry(8,3.1),new THREE.MeshBasicMaterial({map:S3.ledT,toneMapped:false})); screen.position.set(0,4.3,-2.9); g.add(screen);
+    [-5.6,5.6].forEach(x=>{ const t=new THREE.Mesh(new THREE.BoxGeometry(0.3,6.2,0.3),M2(0x3a3f5a,{metalness:.7,roughness:.3})); t.position.set(x,3.1,-2.6); g.add(t);
+      const sp=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.8,1),M2(0x0b0d18)); sp.position.set(x*1.12,0.9,1.6); g.add(sp); });
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(11.5,0.3,0.3),M2(0x3a3f5a,{metalness:.7})); beam.position.set(0,6.1,-2.6); g.add(beam);
+    S3.cerLamps=[];
+    for(let i=0;i<7;i++){ const l=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false})); l.position.set(-4.5+i*1.5,5.9,-2.4); l.scale.set(2.2,2.2,1); g.add(l); S3.cerLamps.push(l); }
+    // a trophy for the MVP's hand
+    const gold=M2(0xffcf3a,{metalness:.85,roughness:.25}), tr=new THREE.Group();
+    const cup=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.06,0.2,14),gold); cup.position.y=0.2; tr.add(cup);
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.12,8),gold); stem.position.y=0.05; tr.add(stem);
+    const base=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.04,0.12),gold); tr.add(base); S3.cerTrophy=tr;
+  }
+  S3.cerTrim.color.set(T.hud); S3.cerStage.position.set(0,0,CER_Z); S3.cerStage.visible=true;
+}
+function startCeremony(){
+  const h=G.score.home,a=G.score.away, side=a>h?'away':'home', T=G[side], dome=G.park&&G.park.kind==='dome';
+  const M=pickMvp(T), bpm=songFor('anthem',null,T).bpm;
+  buildCerStage(T);
+  Object.values(FIGS).forEach(f=>f.root.visible=false);
+  const fig=figFor(M.p,T,side,'field'); placeFig(fig,0,CER_Z+2.05,0,0.5); fig.root.rotation.y=0;
+  fig.rHand.add(S3.cerTrophy); S3.cerTrophy.position.set(0,0.02,0.04); S3.cerTrophy.visible=true;
+  // the squad steps off its own stage onto the field
+  const sr=S3.squadRoot; S3.cerSq={pos:sr.position.clone(),rot:sr.rotation.clone(),sc:sr.scale.clone()};
+  S3.cerStage.add(sr); sr.position.set(0,0.5,-0.4); sr.rotation.set(0,0,0); sr.scale.setScalar(1);
+  const moves=[]; for(let i=0;i<CER_ROUNDS;i++){ let m; do{ m=pick(CER_MOVES); }while(moves.length&&moves[moves.length-1]===m); moves.push(m); }
+  G.cer={side,T,mvp:M.p,line:M.line,fig,dome,bpm,moves,res:[],heat:dome?30:20,fb:null,beat:0,shown:{}};
+  popup(dome?'巨蛋賽後演唱會':'賽後頒獎',{sub:`單場 MVP　#${M.p.num} ${M.p.name}`,color:T.hud,size:48,dur:2600,y:250});
+  setMarquee(`單場 MVP　${M.p.name}　${M.line}　·　${T.squad.n} 和 MVP 一起跳！`);
+  sfx('roar'); G.fwT=2.5; fwBurst(S3.fw);
+  startCut('mvp',600000,{side},endCeremony); G.cut.skip=false;
+}
+function cerPhase(b){ return b<CER_B.award?'award':b<CER_B.intro?'intro':b<CER_B.end-8?'dance':'final'; }
+function cerRound(b){ const k=b-CER_B.intro; return {r:Math.floor(k/8),local:k-Math.floor(k/8)*8}; }
+function cerInput(g){
+  const C=G.cer; if(!C||cerPhase(C.beat)!=='dance') return;
+  const {r,local}=cerRound(C.beat); if(r<0||r>=CER_ROUNDS||C.res[r]||local<3.2||local>=6.5) return;
+  const mv=C.moves[r], d=Math.abs(local-4), ok=g===mv.g;
+  const grade=!ok?'WRONG':d<0.45?'PERFECT':'GOOD';
+  C.res[r]={g,grade,at:C.beat}; C.heat=clamp(C.heat+{PERFECT:14,GOOD:8,WRONG:-3}[grade],0,100);
+  C.fb={txt:{PERFECT:'PERFECT！',GOOD:'GOOD！',WRONG:'跳錯了！'}[grade],c:{PERFECT:'#FFD54A',GOOD:'#7CFF8A',WRONG:'#FF8A8A'}[grade],t:0};
+  if(grade==='PERFECT'){ sfx('cheer'); haptic(18); } else if(grade==='GOOD') sfx('cheer'); else sfx('ooh');
+}
+function updateCeremony(dt){
+  const C=G.cer, c=G.cut; if(!C||!c) return;
+  C.beat=Math.max(0,(c.t/1000-0.06)*C.bpm/60); const b=C.beat, ph=cerPhase(b);
+  if(C.fb) C.fb.t+=dt;
+  if(ph!=='award'&&S3.cerTrophy.visible){ S3.cerTrophy.visible=false; }
+  if(ph==='intro'&&!C.shown.intro){ C.shown.intro=true; popup('跟著啦啦隊跳！',{sub:'她們先跳一小節，換你時滑動或點一下',color:C.T.hud,size:40,dur:2200,y:250}); }
+  if(ph==='dance'){ const {r,local}=cerRound(b);
+    if(local>=6.5&&!C.res[r]){ C.res[r]={g:null,grade:'MISS',at:b}; C.heat=clamp(C.heat-4,0,100); C.fb={txt:'MISS',c:'#9FA8D6',t:0}; }
+    if(local<0.1&&!C.shown['r'+r]){ C.shown['r'+r]=true; if(C.dome||r>=3) fwBurst(S3.fw); } }
+  if(ph==='final'&&!C.shown.final&&!C.skipped){ C.shown.final=true;
+    const pf=C.res.filter(x=>x&&x.grade==='PERFECT').length, gd=C.res.filter(x=>x&&x.grade==='GOOD').length;
+    C.rank=C.heat>=90?'S':C.heat>=70?'A':C.heat>=45?'B':'C'; C.coins=pf*15+gd*8+({S:60,A:30,B:10,C:0})[C.rank];
+    popup(`現場熱度 ${C.rank}`,{sub:`PERFECT ${pf}・GOOD ${gd}　+${C.coins} 金幣`,color:'#FFD54A',size:54,dur:3000,y:250});
+    sfx('roar'); G.fwT=4; for(let k=0;k<(C.dome?6:3);k++) fwBurst(S3.fw); }
+  if(b>=CER_B.end) c.t=c.dur;
+  cerLights(c.t/1000,C);
+  // the MVP
+  const f=C.fig; f.root.rotation.y=0; let p;
+  if(ph==='award'){ const k=Math.min(1,b/1.5); p=lp(FSTAND,REACT.pump,ease(k)); }
+  else if(ph==='dance'){ const {r}=cerRound(b), res=C.res[r];
+    if(res&&res.g){ const mv=CER_MOVES.find(m=>m.g===res.g); p=dancePose(0,b,[mv.m],'idol',{amp:1.1}); if(res.grade==='WRONG'&&b-res.at>2.2) p=lp(p,REACT.helmet,0.6); }
+    else if(res&&res.grade==='MISS') p=lp(dancePose(0,b,['HIP'],'idol',{}),REACT.slump,0.5);
+    else p=dancePose(0,b,['HIP'],'idol',{amp:.8}); }
+  else p=dancePose(0,b,ph==='final'?['JUMP','CLAPUP','JUMP','HV']:['HIP','CL'],'idol',{amp:1.1});
+  f.noSpring=false; drive(f,p,dt/1000);
+}
+// what the squad dances while the MVP is up there
+function cerRoutine(){
+  const C=G.cer, ph=cerPhase(C.beat);
+  if(ph==='dance'){ const {r}=cerRound(C.beat); return [C.moves[r].m]; }
+  if(ph==='final') return ['JUMP','CLAPUP','JUMP','HV'];
+  return ['CLAPUP','HIP','CLAPUP','HIP'];
+}
+function cerLights(t,C){
+  const L=S3.lights, lv=C.dome?1:0.55, dim=t<1.2?1-0.85*t/1.2*lv:1-0.85*lv, T=C.T;
+  L.hemi.intensity=L.base[0]*dim; L.key.intensity=L.base[1]*dim; L.fill.intensity=L.base[2]*dim; L.back.intensity=L.base[3]*dim;
+  S3.glows.forEach(g=>g.material.opacity=dim); S3.lampMat.color.setScalar(Math.max(.15,dim));
+  const beat=C.beat, cs=[col(T.hud),col(T.c3),col('#FF3D7F'),col('#9FE3FF')];
+  S3.beams.forEach((bm,i)=>{ bm.visible=t>1; if(!bm.visible) return; const a=t*1.2+i*2.1; bm.lookAt(Math.sin(a)*7,0,CER_Z+Math.cos(a*1.3)*4); bm.material.color.copy(cs[(i+Math.floor(beat/2))%4]); bm.material.opacity=(0.06+0.12*(beat%1<.25?1:0))*lv; });
+  S3.spots.forEach((s,i)=>{ s.intensity=t>0.6?1.6:0; s.color.copy(i%2?col('#ffffff'):cs[i%4]); s.target.position.set(Math.sin(t*0.9+i*1.7)*3.5,0.5,CER_Z+0.5); });
+  S3.lasers.forEach((l,i)=>{ l.visible=C.dome&&t>3; if(!l.visible) return; l.material.opacity=0.55; l.material.color.copy(cs[(i+1)%4]); l.rotation.set(-0.1+Math.sin(t*2.4+i)*0.16,(i-4.5)*0.12+Math.sin(t*1.1)*0.3,0); });
+  S3.cerLamps.forEach((l,i)=>{ const on=((Math.floor(beat*2)+i)%3)===0; l.material.color.copy(cs[i%4]); l.material.opacity=on?1:.25; });
+}
+// put the squad back on its own stage and strike the field stage (also when a new game starts mid-show)
+function cerCleanup(){
+  if(!S3.cerStage) return;
+  const sr=S3.squadRoot; if(sr.parent!==stScene){ if(sr.parent) sr.parent.remove(sr); stScene.add(sr); sr.position.copy(S3.cerSq.pos); sr.rotation.copy(S3.cerSq.rot); sr.scale.copy(S3.cerSq.sc); }
+  S3.cerTrophy.visible=false; if(S3.cerTrophy.parent) S3.cerTrophy.parent.remove(S3.cerTrophy);
+  S3.cerStage.visible=false;
+}
+function endCeremony(){
+  const C=G.cer; if(!C) return;
+  cerCleanup(); C.fig.root.visible=false;
+  if(C.coins){ SAVE.coins+=C.coins; G.coinsEarned+=C.coins; persist(); }
+  G.cerDone={rank:C.skipped&&!C.shown.final?null:C.rank,coins:C.coins||0,mvp:C.mvp.name}; G.cer=null;
+  restoreLights(); G.phase='over'; showOver();
+}
+function skipCeremony(){ if(G.cer&&G.cut&&G.cut.type==='mvp'){ G.cer.skipped=true; G.cut.t=G.cut.dur; } }
+function cerSkipRect(){ return {x:W-124,y:FT+10,w:110,h:40}; }
 /* =========================================================
    Per-frame update
    ========================================================= */
@@ -3300,7 +3417,7 @@ function update(dt){
     }
     switch(G.phase){
       case 'wait': if(G.t>=G.waitDur){ const f=G.next; G.next=null; G.phase='idle'; if(f) f(); } break;
-      case 'cut': { const c2=G.cut; c2.t+=dt; if(c2.type==='show') updateShow(dt); if(c2.type==='concert') updateConcert(dt); if(c2.t>=c2.dur){ G.cut=null; G.phase='idle'; c2.onEnd&&c2.onEnd(); } } break;
+      case 'cut': { const c2=G.cut; c2.t+=dt; if(c2.type==='show') updateShow(dt); if(c2.type==='mvp') updateCeremony(dt); if(c2.t>=c2.dur){ G.cut=null; G.phase='idle'; c2.onEnd&&c2.onEnd(); } } break;
       case 'windup': if(G.t>=G.windDur) launch(); break;
       case 'flight': updateFlight(dt); break;
       case 'gauge': if(G.ring){ const R=G.ring, u=G.t/R.dur; R.r=R.r0*(1-u); if(R.wob){ R.ox=Math.sin(G.t/90)*R.wob*6; R.oy=Math.cos(G.t/120)*R.wob*6; } if(u>=1){ R.r=0; stopGauge(); } } break;
@@ -3515,20 +3632,6 @@ function updateSwingTrail(){
 function dropBat(){ G.batDrop.loose=true; G.batDrop.t=0; scene.attach(S3.bat); }
 
 /* ---------- light show ---------- */
-function concertStage(){ const c=G.cut; return !!(c&&c.type==='concert'&&(c.t/1000)%6.5<4); }
-function updateConcert(dt){
-  const C=G.concert; if(!C) return; C.t+=dt;
-  const L=S3.lights, t=C.t/1000, T=C.T, dim=t<1.2?1-t*0.7:t<15.2?0.16:Math.min(1,0.16+(t-15.2)/0.8);
-  L.hemi.intensity=L.base[0]*dim; L.key.intensity=L.base[1]*dim; L.fill.intensity=L.base[2]*dim; L.back.intensity=L.base[3]*dim;
-  S3.glows.forEach(g=>g.material.opacity=dim); S3.lampMat.color.setScalar(Math.max(.15,dim));
-  const on=t>1.0&&t<15.4, beat=t*(G.bpm||128)/60, cs=[col(T.hud),col(T.c3),col('#FF3D7F'),col('#9FE3FF')];
-  S3.beams.forEach((b,i)=>{ b.visible=on; if(!on) return; const a=t*1.4+i*2.1, k=i/(S3.beams.length-1)-.5;
-    b.lookAt(Math.sin(a)*30+k*20,0,-44+Math.cos(a*1.3)*22); b.material.color.copy(cs[(i+Math.floor(beat/2))%4]); b.material.opacity=0.2+0.3*(beat%1<.25?1:0); });
-  S3.spots.forEach((s2,i)=>{ s2.intensity=on?3.2:0; s2.color.copy(cs[i%4]); const a=t*1.1+i*1.6; s2.target.position.set(Math.sin(a)*24,0,-44+Math.cos(a)*24); });
-  S3.lasers.forEach((l,i)=>{ l.visible=on&&t>3; if(!l.visible) return; l.material.opacity=0.6; l.material.color.copy(cs[(i+1)%4]); l.rotation.set(-0.1+Math.sin(t*2.6+i)*0.16,(i-4.5)*0.12+Math.sin(t*1.2)*0.3,0); });
-  if(t>2&&t-C.fw>1.4){ C.fw=t; fwBurst(S3.fw); if(t>12) fwBurst(S3.fw); sfx('boom'); }
-  if(t>14.6&&!C.fin){ C.fin=true; for(let k=0;k<6;k++) fwBurst(S3.fw); confetti(300); G.flash=1; }
-}
 function updateShow(dt){
   const S=G.show; if(!S) return; S.t+=dt;
   const L=S3.lights, t=S.t/1000, T=S.T;
@@ -3571,6 +3674,7 @@ function updateSmoke(dt){
 /* ---------- figure animation ---------- */
 const UPV=new V3(0,1,0);
 function updateFigures(dt){
+  if(G.cer) return;  // the MVP is posed by the ceremony
   const pl=G.play, F=G.fielders||[];
   F.forEach((f,i)=>{
     if(!f.root.visible&&!(i===0&&G.show)) return;
@@ -3713,7 +3817,8 @@ function squadRoutine(side){
   const withSig=(r,i)=>{ const a=r.slice(); a[i]=sig; return a; };
   if(side==='home'&&G.phase==='lucky') return {routine:withSig(['CLAPUP','PT_R','CLAPUP','PT_L','SHIMMY','WAVE_B','FLIP','JUMP'],4)};
   if(G.cut&&G.cut.type==='kdance'&&G.cut.data.side===side) return {routine:K_SEQ};
-  if(G.attract||(G.cut&&G.cut.type==='concert')) return {routine:withSig(MOVE_POOL[T.squad.style],3)};
+  if(G.cer&&side===G.cer.side) return {routine:cerRoutine()};
+  if(G.attract) return {routine:withSig(MOVE_POOL[T.squad.style],3)};
   const R=TEAM_ROUTINES[T.id]||TEAM_ROUTINES.TB, blk=Math.floor(G.beatPos/16);
   if(side==='home'&&G.comebackT&&G.clock-G.comebackT<14000) return {routine:R.come};
   if(batSide()===side) return {routine:G.chance?withSig(CHANCE_SEQ,5):blk%3===2?R.a:withSig(curBatter().dance,5)};
@@ -3729,7 +3834,8 @@ function updateSquads(dt){
     const cut=G.cut;
     if(cut&&cut.data&&cut.data.side===side&&cut.type==='celebrate') mood='jump';
     if(cut&&cut.type==='skill'&&side==='home') mood='skill';
-    if(cut&&(cut.type==='kdance'||cut.type==='concert')&&side==='home') mood='routine';
+    if(cut&&cut.type==='kdance'&&side==='home') mood='routine';
+    if(G.cer&&side===G.cer.side) mood=cerPhase(G.cer.beat)==='award'?'jump':'routine';
     if(side==='away'&&G.half==='top'&&cut&&cut.type==='celebrate'&&cut.data.side==='away') mood='jump';
     const formName=FORM_SEQ[st][Math.floor(b/8)%4];
     const form=FORMS[formName];
@@ -3845,7 +3951,12 @@ function updateCamera2(dt){
       L.face.position.copy(h).addScaledVector(fwd,1.2).add(new V3(0,0.4,0)); L.face.intensity=1.6;
       return;
     }
-    if(c.type==='concert'){ const t=c.t/1000, a=-0.9+t*0.09; cam.position.set(Math.sin(a)*55,14+Math.sin(t*0.4)*6,-40+Math.cos(a)*55); cam.lookAt(0,6,-44); return; }
+    if(c.type==='mvp'&&G.cer){ const C=G.cer, b=C.beat, ph=cerPhase(b), sw=Math.sin(c.t/2600);
+      // award: on the MVP; the dance: the whole stage; the finale and dome concerts pull back for the lights
+      if(ph==='award'){ const k=ease(Math.min(1,b/6)); cam.position.set(sw*0.8,lerp(2.6,1.9,k),CER_Z+lerp(9,5.2,k)); _cl.set(0,1.5,CER_Z+1.8); }
+      else if(ph==='final'&&C.dome){ const a=-0.6+(b-CER_B.end+8)*0.05; cam.position.set(Math.sin(a)*26,9,CER_Z+Math.cos(a)*26); _cl.set(0,2,CER_Z); }
+      else { cam.position.set(sw*1.6,2.4,CER_Z+10.5); _cl.set(0,1.45,CER_Z+0.6); }
+      cam.lookAt(_cl); return; }
     if(c.type==='show'){
       const S=G.show, t=S.t/1000, f=G.fielders[0];
       if(S.big&&t<2.2){ const a=-0.6+t*0.25; cam.position.set(Math.sin(a)*70,26+t*3,10+Math.cos(a)*20); cam.lookAt(0,4,-45); return; }
@@ -3904,11 +4015,6 @@ function updateCamera2(dt){
 function stageCutCam(c){
   const u=c.t/c.dur, n=c.type==='skill'?1:Math.floor(u*3)%3, k=(u*3)%1;
   if(c.type==='skill'){ cutCam.position.set(lerp(-1.2,1.2,u),1.25,2.6); cutCam.lookAt(-0.55,1.2,0.25); return; }
-  if(c.type==='concert'){ const t=c.t/1000, sh=Math.floor(t/6.5)%3, k=(t%6.5)/4;
-    if(sh===0){ cutCam.position.set(lerp(-2,2,k),1.4,lerp(8.5,6.8,k)); cutCam.lookAt(0,1.4,0); }
-    else if(sh===1){ cutCam.position.set(lerp(-3.2,-1.6,k),0.45,3.4); cutCam.lookAt(0,1.6,0); }
-    else { cutCam.position.set(lerp(1.2,0.2,k),1.55,lerp(3.4,2.8,k)); cutCam.lookAt(-0.2,1.45,0); }
-    return; }
   if(G.phase==='lucky'){ const a=G.clock*0.0004; cutCam.position.set(Math.sin(a)*1.5,1.6,7.5); cutCam.lookAt(0,1.6,0); return; }
   if(n===0){ cutCam.position.set(lerp(-1.5,1.5,k),1.5,7.6); cutCam.lookAt(0,1.4,0); }
   else if(n===1){ cutCam.position.set(lerp(1.3,0.3,k),1.6,3.8); cutCam.lookAt(-0.3,1.45,0); }
@@ -3934,14 +4040,14 @@ function updateAura(dt){
     p.sp.material.color.copy(c).lerp(new THREE.Color(1,1,1),0.35*Math.sin(p.ph*Math.PI)); p.sp.material.opacity=Math.sin(p.ph*Math.PI)*0.95; });
   S3.auraCore.position.set(0,1.05,0); const ks=2.3+0.35*Math.sin(t*6); S3.auraCore.scale.set(ks*0.8,ks*1.25,1); S3.auraCore.material.color.copy(c); S3.auraCore.material.opacity=0.28+0.12*Math.sin(t*6);
 }
-function stageSide(){ if(!G||G.attract) return 'home'; if(G.cut&&G.cut.type==='kdance') return G.cut.data.side; return 'home'; }
+function stageSide(){ if(!G||G.attract) return 'home'; if(G.cer) return G.cer.side; if(G.cut&&G.cut.type==='kdance') return G.cut.data.side; return 'home'; }
 function render(){
   if(renderer&&TITLE.scene&&!$('scrTitle').hidden){ renderTitle(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,hud.width,hud.height); return; }
   if(renderer&&G){
     renderer.setScissorTest(true);
     const vp=r=>{ const c=cssRect(r,LAYOUT.tall&&r.y<FB?'field':null); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h); };
     renderer.setViewport(0,0,cssW,cssH); renderer.setScissor(0,0,cssW,cssH); renderer.setClearColor(0x0a0d1e,1); renderer.clear();
-    const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type))||concertStage();
+    const stageView=G.phase==='lucky'||(G.phase==='cut'&&G.cut&&['cheer','celebrate','skill','kdance'].includes(G.cut.type));
     const fsrc=LAYOUT.fieldSrc||{x:0,y:FT,w:W,h:FB-FT}, asp=fsrc.w/fsrc.h, vk=fsrc.h/(FB-FT);
     if(Math.abs(cam.aspect-asp)>1e-4||cam.vk!==vk){ cam.vk=vk;
       cam.fov=2*Math.atan(Math.tan(36*D2R/2)*vk)/D2R; cam.aspect=asp; cam.updateProjectionMatrix();
@@ -3988,6 +4094,7 @@ function render(){
     drawFieldHud();
     drawKaraokeStrip();
     drawPopups();
+    drawCeremony();
     drawShout();
     drawScoreboard();
     drawStageHud();
@@ -4453,6 +4560,31 @@ function drawControls(){
   if(userBatting()&&G.phase!=='lucky'&&!G.over&&!G.play&&G.phase!=='cut') drawSwingBtn();
   txt(ctlHint(),W/2,ST1+32,20,'#C9CCF0',{w:700});
 }
+// post-game MVP stage: heat meter, the move to copy, a beat ring toward the downbeat, grades
+function drawCeremony(){
+  const C=G.cer; if(!C||HUD_KIND==='bottom') return;
+  const b=C.beat, ph=cerPhase(b), T=C.T, cx=W/2;
+  const sk=cerSkipRect(); ctx.fillStyle='rgba(7,8,26,.6)'; rr(sk.x,sk.y,sk.w,sk.h,sk.h/2); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1.5; ctx.stroke();
+  txt('略過 ▶',sk.x+sk.w/2,sk.y+sk.h/2+1,16,'#fff',{w:700});
+  if(ph==='award'){ txt('單場 MVP',cx,FT+120,26,T.hud,{stroke:5,sc:'#07081A'}); txt(`#${C.mvp.num} ${C.mvp.name}${C.mvp.nick?'「'+C.mvp.nick+'」':''}`,cx,FT+162,34,'#fff',{stroke:6,sc:'#07081A'}); txt(C.line,cx,FT+198,18,'#FFE7A8',{stroke:4,sc:'#07081A'}); return; }
+  // heat meter
+  const mx=40, my=FT+64, mw=W-80, mh=14; ctx.fillStyle='rgba(7,8,26,.65)'; rr(mx,my,mw,mh,7); ctx.fill();
+  const hg=ctx.createLinearGradient(mx,0,mx+mw,0); hg.addColorStop(0,'#5AC8FF'); hg.addColorStop(.6,T.hud); hg.addColorStop(1,'#FF3D7F'); ctx.fillStyle=hg; rr(mx,my,mw*C.heat/100,mh,7); ctx.fill();
+  txt(`現場熱度 ${Math.round(C.heat)}`,mx,my-14,15,'#fff',{a:'left',w:700,stroke:3,sc:'#07081A'});
+  if(ph==='intro'){ const n=CER_MOVES.length, gw=(W-60)/n;
+    CER_MOVES.forEach((m,i)=>{ const x=30+gw*i+gw/2, y=FB-150; ctx.fillStyle='rgba(7,8,26,.7)'; ctx.beginPath(); ctx.arc(x,y,30,0,Math.PI*2); ctx.fill(); txt(m.ic,x,y+2,28,'#fff'); txt(m.n,x,y+48,14,'#E8EAFF',{w:700,stroke:3,sc:'#07081A'}); }); return; }
+  if(ph==='dance'){ const {r,local}=cerRound(b), mv=C.moves[r], mine=local>=4, res=C.res[r];
+    const y=FT+180, rad=56;
+    ctx.fillStyle=mine?'rgba(255,61,127,.82)':'rgba(7,8,26,.75)'; ctx.beginPath(); ctx.arc(cx,y,rad,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=T.hud; ctx.lineWidth=4; ctx.stroke();
+    txt(mv.ic,cx,y+4,58,'#fff',{stroke:4,sc:'#07081A'});
+    txt(mine?(res?'':'換你！'):`看清楚：${mv.n}`,cx,y+rad+30,mine?30:22,mine?'#FFD54A':'#fff',{stroke:5,sc:'#07081A'});
+    // the closing ring lands on the downbeat of the player's bar
+    if(!res&&local>=2&&local<4.6){ const u=clamp((4-local)/2,0,1), rr2=rad+6+u*70; ctx.globalAlpha=0.35+0.65*(1-u); ctx.strokeStyle=u<0.12?'#7CFF8A':'#fff'; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(cx,y,rr2,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
+    txt(`${r+1} / ${CER_ROUNDS}`,cx,FT+108,16,'#C9CCF0',{w:700,stroke:3,sc:'#07081A'});
+  }
+  if(C.fb&&C.fb.t<900){ const u=C.fb.t/900; ctx.globalAlpha=1-u*u; txt(C.fb.txt,cx,FT+330-u*30,44,C.fb.c,{stroke:7,sc:'#07081A'}); ctx.globalAlpha=1; }
+}
 /* =========================================================
    Lucky 7 cheer rhythm game: tap, hold, slide, mash and swipe notes
    placed around the screen, each with a shrinking approach ring
@@ -4838,7 +4970,9 @@ hud.addEventListener('pointerdown',e=>{
     const hit=pickGirl(p);
     if(hit&&hit.f.girl){ G.gdrag={g:hit.f.girl,T:hit.T,lead:hit.f.lead,id:e.pointerId,y0:e.clientY,t:performance.now()}; fillGirlCard(hit.f.girl,hit.T,hit.f.lead); const el=$('girlCard'); el.hidden=false; el.style.transform='translateX(-50%) scale(.25)'; el.style.opacity='.6'; try{ hud.setPointerCapture(e.pointerId); }catch(_){} return; }
   }
-  if(G.attract||p.sq) return;
+  if(G.attract) return;
+  if(G.cer){ if(inRect(p,cerSkipRect())){ skipCeremony(); return; } G.cerSw={id:e.pointerId,x:e.clientX,y:e.clientY}; return; }
+  if(p.sq) return;
   if(p.joy){ const t=joyTarget(); G.joy={id:e.pointerId,sx:p.cx,sy:p.cy,dx:0,dy:0,c0:{x:t.x,y:t.y}}; try{ hud.setPointerCapture(e.pointerId); }catch(_){} return; }
   if(p.pb){ if(G.phase==='gauge') stopGauge(); else pickPitch(p.pb-1); return; }
   if(p.pen){ if(G.home.pen.length){ G.penOpen=true; sfx('tick'); } return; }
@@ -4884,6 +5018,8 @@ hud.addEventListener('pointermove',e=>{
   }
 });
 ['pointerup','pointercancel'].forEach(t=>hud.addEventListener(t,e=>{
+  if(G&&G.cerSw&&e.pointerId===G.cerSw.id){ const dx=e.clientX-G.cerSw.x, dy=e.clientY-G.cerSw.y, d=Math.hypot(dx,dy); G.cerSw=null;
+    if(t==='pointerup') cerInput(d<22?'T':Math.abs(dx)>Math.abs(dy)?(dx<0?'L':'R'):(dy<0?'U':'D')); return; }
   if(G&&G.joy&&e.pointerId===G.joy.id){ G.joy=null; return; }
   if(G&&G.gdrag&&e.pointerId===G.gdrag.id){ const dy=G.gdrag.y0-e.clientY, quick=performance.now()-G.gdrag.t<300&&Math.abs(dy)<8; G.gdrag=null; if(dy>30||quick){ const el=$('girlCard'); el.style.transform='translateX(-50%) scale(1)'; el.style.opacity='1'; G.gcardOpen=true; G.paused=true; } else closeGirlCard(); return; }
   if(G&&G.phase==='lucky') rhythmUp(); if(drag&&e.pointerId===drag.id) drag=null; }));
@@ -4893,6 +5029,7 @@ window.addEventListener('keydown',e=>{
   if(screens.some(s=>!$(s).hidden)) return;
   audioInit();
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if(G.cer){ if(!e.repeat){ const g={ArrowLeft:'L',ArrowRight:'R',ArrowUp:'U',ArrowDown:'D',KeyA:'L',KeyD:'R',KeyW:'U',KeyS:'D',Space:'T',Enter:'T',KeyJ:'T'}[e.code]; if(g) cerInput(g); else if(e.code==='Escape') skipCeremony(); } return; }
   if(G.phase==='lucky'){ if(!e.repeat) rhythmKey(e.code,true); return; }
   keys[e.code]=true;
   if(e.repeat) return;
@@ -5109,7 +5246,7 @@ function showOver(){
   G.home.lineup.forEach(b=>{ const s=b.h+b.hrG*2+b.rbi*1.5; if(b.ab&&s>bs){bs=s;best=b;} });
   $('ovMvp').textContent=best&&bs>0?`#${best.num} ${best.name}${best.nick?`「${best.nick}」`:''}　${best.ab} 打數 ${best.h} 安打${best.hrG?` ${best.hrG} 轟`:''}${best.rbi?` ${best.rbi} 分打點`:''}`:`投手群　${G.ks} 次三振`;
   const lk=G.luckyScore?`幸運七局評價 ${G.luckyScore.rank}・最大連擊 ${G.luckyScore.combo}`:'未進行幸運七局';
-  $('ovCheer').textContent=`${G.leader.n} 發動應援 ${G.skillUses} 次 · ${lk}`;
+  $('ovCheer').textContent=`${G.leader.n} 發動應援 ${G.skillUses} 次 · ${lk}${G.cerDone&&G.cerDone.rank?` · MVP 舞台熱度 ${G.cerDone.rank}（+${G.cerDone.coins}）`:''}`;
   $('ovCoins').textContent=`+${G.coinsEarned}（目前 ${SAVE.coins}）`;
   show('scrOver');
 }
@@ -5280,7 +5417,7 @@ function musicMode(){
   if(!G) return null;
   const H=G.home, A=G.away;
   if(G.attract) return {key:'title'+H.id,song:songFor('anthem',null,H),vol:.45};
-  if(G.cut&&G.cut.type==='concert') return {key:'concert'+H.id,song:songFor('anthem',null,H),vol:1};
+  if(G.cer) return {key:'cer'+G.cer.T.id,song:songFor('anthem',null,G.cer.T),vol:1};
   if(G.over) return G.score.home>G.score.away?{key:'win',song:songFor('win',null,H),vol:1}:null;
   if(G.phase==='trot') return {key:'trot'+batTeam().id,song:songFor('win',null,batTeam()),vol:1};
   if(G.show&&G.show.big) return {key:'closer'+G.show.T.id,song:songFor('closer',null,G.show.T),vol:1};
@@ -5376,7 +5513,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010150541', box=document.getElementById('upd');
+  const BUILD='20261010151736', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
