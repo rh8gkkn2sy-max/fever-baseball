@@ -199,7 +199,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.4（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.5（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -221,7 +221,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.4（2026.10.10）</div>
+    <div class="ver">版本 2.5（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -606,14 +606,14 @@ function speakNow(text,rate){
 // classic CPBL stand calls, picked by the situation and never twice in a row
 function pickChant(list){ MUS.recent=MUS.recent||[]; const fresh=list.filter(s=>!MUS.recent.includes(s)), s=pick(fresh.length?fresh:list); MUS.recent.push(s); if(MUS.recent.length>4) MUS.recent.shift(); return s; }
 const OFF_T={
-  base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！'],
-  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！'], spd:['{n}！跑起來！','閃電出擊！{n}！'],
+  base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！','一直安打，一直打！一直安打，一直打！','{tn}！尚勇！'],
+  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！','炸裂！炸裂！全壘打！','轟吧！一棒轟出牆！'], steal:['盜！盜！盜！衝啊！'], spd:['{n}！跑起來！','閃電出擊！{n}！'],
   risp:['得分！得分！{n}！','帶他們回家！帶他們回家！','一支安打就好！','打點！打點！{n}！'], loaded:['滿壘！清壘！清壘！','滿貫全壘打！'],
   two:['顧好！顧好！選好球！','穩住！穩住！看清楚！'], three:['看清楚！保送也好！'], behind:['逆轉！逆轉！{tn}逆轉！','還沒結束！追上去！'], twoOut:['兩出局！不放棄！','最後一口氣！衝啊！']};
 const DEF_T={
   base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！'],
-  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','三振！三振！','一顆就好！一顆好球！'], one:['再一個好球！','揮棒落空！揮棒落空！'],
-  dp:['雙殺！雙殺！','滾地球！雙殺！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
+  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','麻糬麻糬，三振出局！','三振！三振！','一顆就好！一顆好球！'], one:['再一個好球！','揮棒落空！揮棒落空！'],
+  dp:['雙殺！雙殺！','滾地球！雙殺！','水果滷味，雙殺！雙殺！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
   twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！'], clean:['三上三下！三上三下！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！']};
 const SHOUT_T={hr:'全壘打！{n}！全壘打！',hit:'安打！{n}！',score:'得分！{tn}得分！',trot:'全壘打！{n}！繞場一周！',come:'逆轉！逆轉！{tn}逆轉！',ahead:'超前！超前！{tn}加油！',
   closerIn:'守護神登場！{pn}！',lucky:'幸運七局！全場起立！跟著我一起喊！{tn}加油！',luckyGood:'太棒了！全場沸騰！',luckyOk:'很好！繼續大聲喊！',greet:'{tn}應援團，比賽開始！全場一起加油！',
@@ -623,6 +623,7 @@ function offenseChant(){
   const b=curBatter(), v={n:b.short||b.name,tn:batTeam().name}, behind=G.score.home<G.score.away, L=OFF_T.base.slice();
   if(b.pow>.75) L.push(...OFF_T.pow); if(b.spd>.8) L.push(...OFF_T.spd);
   if(G.bases[1]||G.bases[2]) L.push(...OFF_T.risp); if(G.bases[0]&&G.bases[1]&&G.bases[2]) L.push(...OFF_T.loaded);
+  if(G.bases[0]&&!G.bases[1]&&G.outs<2) L.push(...OFF_T.steal);
   if(G.strikes===2) L.push(...OFF_T.two); if(G.balls===3) L.push(...OFF_T.three);
   if(behind&&G.inning>=7) L.push(...OFF_T.behind); if(G.outs===2) L.push(...OFF_T.twoOut);
   return fillT(pickChant(L),v);
@@ -655,7 +656,7 @@ function captainLines(){
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
-const VP={map:{},loading:{},clips:{}}, VOICE_VER=3;
+const VP={map:{},loading:{},clips:{}}, VOICE_VER=4;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
@@ -1461,7 +1462,7 @@ function buildWorld(){
   const ac=document.createElement('canvas'); ac.width=2048; ac.height=96; S3.adCanvas=ac; S3.adTex=canvasTex(ac,true); drawAds(null);
   S3.adMat=new THREE.MeshBasicMaterial({map:S3.adTex,side:THREE.DoubleSide,toneMapped:false});
   scene.add(new THREE.Mesh(arcStrip(s=>wallM(s),0.15,3.0,-45,45,1,40),S3.adMat));
-  scene.add(new THREE.Mesh(arcStrip(s=>wallM(s),0,0.15,-45,45,1,40),new THREE.MeshStandardMaterial({color:0x0e2a26,side:THREE.DoubleSide})));
+  S3.wallBase=new THREE.Mesh(arcStrip(s=>wallM(s),0,0.15,-45,45,1,40),new THREE.MeshStandardMaterial({color:0x0e2a26,side:THREE.DoubleSide})); scene.add(S3.wallBase);
   S3.trimMat=new THREE.MeshBasicMaterial({color:0xffd21f,side:THREE.DoubleSide});
   scene.add(new THREE.Mesh(arcStrip(s=>wallM(s),3.0,3.18,-45,45,1,40),S3.trimMat));
   [-45,45].forEach(s=>{ const p=polar(s,wallM(s)+.3); const pole=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,28,8),new THREE.MeshBasicMaterial({color:0xffe14a})); pole.position.set(p.x,14,p.z); scene.add(pole); });
@@ -1489,7 +1490,8 @@ function buildWorld(){
     }
   }
   const stG=new THREE.BufferGeometry(); stG.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); stG.setAttribute('color',new THREE.Float32BufferAttribute(colr,3)); stG.computeVertexNormals();
-  scene.add(new THREE.Mesh(stG,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,side:THREE.DoubleSide})));
+  S3.stands=new THREE.Mesh(stG,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.9,side:THREE.DoubleSide})); scene.add(S3.stands);
+  S3.standTop=s=>({r:inner(s)+ROWS*RD,y:base(s)+ROWS*RH}); S3.standInner=inner;
   const seats=[];
   for(let i=0;i<ROWS;i++) for(let s=-86;s<86;){ const r=inner(s)+i*RD+RD*.5; if(rnd()>.12){ const p=polar(s,r); p.y=base(s)+i*RH; seats.push({p,yaw:Math.atan2(-p.x,-p.z)}); } s+=(0.78/r)/D2R; }
   S3.CU={uTime:{value:0},uHome:{value:0.1},uAway:{value:0.05}};
@@ -1501,15 +1503,15 @@ function buildWorld(){
   lg.fillStyle='#1a1d30'; lg.fillRect(0,0,256,128); lg.fillStyle='#fffbe8';
   for(let y=0;y<4;y++) for(let x=0;x<8;x++){ lg.beginPath(); lg.arc(18+x*31,18+y*31,11,0,Math.PI*2); lg.fill(); }
   const lampMat=new THREE.MeshBasicMaterial({map:canvasTex(lampC),toneMapped:false}); S3.lampMat=lampMat;
-  S3.glows=[]; S3.towers=[];
+  S3.glows=[]; S3.towers=[]; S3.towerObjs=[];
   [[-30,150],[30,150],[-64,118],[64,118],[-92,62],[92,62]].forEach(([s,d])=>{
     const p=polar(s,d);
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(.5,.9,52,8),new THREE.MeshStandardMaterial({color:0x2a2f4a})); pole.position.set(p.x,26,p.z); scene.add(pole);
     const side=new THREE.MeshStandardMaterial({color:0x22263a});
     const head=new THREE.Mesh(new THREE.BoxGeometry(14,7,1),[side,side,side,side,lampMat,lampMat]);
-    head.position.set(p.x,54,p.z); head.lookAt(0,10,-30); scene.add(head);
+    head.position.set(p.x,54,p.z); head.lookAt(0,10,-30); scene.add(head); S3.towerObjs.push(pole,head);
     const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false,color:0xfff3d6}));
-    spr.position.set(p.x,54,p.z).lerp(new V3(0,54,-30),.04); spr.scale.set(46,46,1); scene.add(spr); S3.glows.push(spr);
+    spr.position.set(p.x,54,p.z).lerp(new V3(0,54,-30),.04); spr.scale.set(46,46,1); scene.add(spr); S3.glows.push(spr); S3.towerObjs.push(spr);
     S3.towers.push(new V3(p.x,52,p.z));
   });
 
@@ -1517,7 +1519,7 @@ function buildWorld(){
   const vb=document.createElement('canvas'); vb.width=512; vb.height=220; S3.vbCanvas=vb; S3.vbTex=canvasTex(vb); S3.vbKey='';
   const vbz=-(wallM(0)+1.2+ROWS*RD+8);
   const frame=new THREE.Mesh(new THREE.BoxGeometry(32,14,1.2),new THREE.MeshStandardMaterial({color:0x14172c})); frame.position.set(0,22,vbz-0.7); scene.add(frame);
-  const scr=new THREE.Mesh(new THREE.PlaneGeometry(30,12.6),new THREE.MeshBasicMaterial({map:S3.vbTex,toneMapped:false})); scr.position.set(0,22,vbz); scene.add(scr);
+  const scr=new THREE.Mesh(new THREE.PlaneGeometry(30,12.6),new THREE.MeshBasicMaterial({map:S3.vbTex,toneMapped:false})); scr.position.set(0,22,vbz); scene.add(scr); S3.vbGroup=[frame,scr];
   [-12,12].forEach(x=>{ const leg=new THREE.Mesh(new THREE.BoxGeometry(1.2,16,1.2),new THREE.MeshStandardMaterial({color:0x22263a})); leg.position.set(x,8,vbz-1); scene.add(leg); });
   S3.vbPos=new V3(0,22,vbz);
 
@@ -1650,6 +1652,82 @@ const WEATHERS={
   windOut:{n:'順風',ic:'⇡',top:'#03051a',hor:'#1e2a5a',fog:[0x0a0d22,170,420],stars:.7,light:[1,1],wind:[0.8,-5.2]},
   windIn:{n:'逆風',ic:'⇣',top:'#03051a',hor:'#1e2a5a',fog:[0x0a0d22,170,420],stars:.7,light:[1,1],wind:[-0.6,4.6]},
 };
+/* ---------- home parks: each club's ground, inspired by the CPBL's real venues (names are our own) ---------- */
+const PARKS={
+  TB:{n:'雷鳥巨蛋',kind:'dome',seat:['#2f3f86','#243270'],riser:'#161c40',wall:'#0b1f4a',trim:'#ffd21f'},
+  BB:{n:'黑熊洲際球場',kind:'canopy',seat:['#1f5a45','#2a6e55'],riser:'#10261f',wall:'#0e2a26',trim:'#e9c24f',board:1.45},
+  WH:{n:'鯨浪府城球場',kind:'palms',seat:['#c0612b','#a8521f'],riser:'#3a1e10',wall:'#123a5a',trim:'#5ac8ff'},
+  SG:{n:'海鷗湖畔球場',kind:'lake',seat:['#2b6a3a','#3a7d48'],riser:'#142a18',wall:'#0e2a26',trim:'#ff3b4e'},
+  LC:{n:'石虎桃園球場',kind:'twodeck',seat:['#b0203a','#d0507a'],riser:'#3a0a14',wall:'#3a0a14',trim:'#ff8a2a'},
+  TY:{n:'颱風風城球場',kind:'mountains',seat:['#3a3f8a','#d8dcef'],riser:'#151a3a',wall:'#151a3a',trim:'#5ef2ff'},
+};
+function buildPark(id){
+  const K=PARKS[id]||PARKS.TB; if(S3.parkId===id) return K; S3.parkId=id;
+  if(S3.parkG){ scene.remove(S3.parkG); S3.parkG.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
+  const g=new THREE.Group(); S3.parkG=g; scene.add(g); S3.park=K;
+  // seats: two-tone sections, darker risers
+  const pa=S3.stands.geometry.attributes.position, ca=S3.stands.geometry.attributes.color, c0=col(K.seat[0]), c1=col(K.seat[1]), cr=col(K.riser);
+  for(let v=0;v<pa.count;v++){ const cell=Math.floor(v/6)%2, x=pa.getX(v), z=pa.getZ(v), s=Math.atan2(x,-z)/D2R, sec=Math.floor((s+90)/15)%2, c=cell?cr:(sec?c1:c0); ca.setXYZ(v,c.r,c.g,c.b); }
+  ca.needsUpdate=true;
+  S3.wallBase.material.color.set(K.wall); S3.trimMat.color.set(K.trim);
+  S3.towerObjs.forEach(o=>o.visible=K.kind!=='dome');
+  S3.vbGroup.forEach(o=>o.scale.setScalar(K.board||1));
+  S3.sky.visible=S3.stars.visible=K.kind!=='dome';
+  const M2=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8},o||{}));
+  const top=s=>S3.standTop(s);
+  if(K.kind==='dome'){
+    // a closed roof: shell, ribs and a lit catwalk ring
+    const shell=new THREE.Mesh(new THREE.SphereGeometry(175,48,16,0,Math.PI*2,0,Math.PI*0.42),M2(0x9aa3b8,{side:THREE.BackSide,roughness:.6,metalness:.3}));
+    shell.position.set(0,-40,-45); g.add(shell);
+    for(let i=0;i<24;i++){ const a=i/24*Math.PI*2, rib=new THREE.Mesh(new THREE.TorusGeometry(175,0.6,4,48,Math.PI*0.42),M2(0x5d667e)); rib.position.copy(shell.position); rib.rotation.set(0,a,Math.PI/2); rib.rotation.order='YXZ'; g.add(rib); }
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(95,1.2,6,96),new THREE.MeshBasicMaterial({color:0xfff6dc,toneMapped:false})); ring.rotation.x=Math.PI/2; ring.position.set(0,62,-45); g.add(ring);
+    const ring2=new THREE.Mesh(new THREE.TorusGeometry(130,0.9,6,96),new THREE.MeshBasicMaterial({color:col(K.trim),toneMapped:false})); ring2.rotation.x=Math.PI/2; ring2.position.set(0,44,-45); g.add(ring2);
+  }
+  if(K.kind==='canopy'){
+    // white wing canopies over the infield stands, lights along the leading edge
+    const roofM=M2(0xf4f6fa,{side:THREE.DoubleSide,roughness:.5});
+    [[-88,-18],[18,88]].forEach(([s0,s1])=>{ const pos=[], idx=[]; let k=0;
+      for(let s=s0;s<=s1;s+=2){ const t=top(s), a=polar(s,t.r-12), b=polar(s,t.r+2), ha=t.y+12, hb=t.y+9; pos.push(a.x,ha,a.z,b.x,hb,b.z); if(k){ const q=k*2; idx.push(q-2,q-1,q,q-1,q+1,q); } k++; }
+      const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo,roofM));
+      for(let s=s0+4;s<=s1-4;s+=8){ const t=top(s), a=polar(s,t.r-12); const lamp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false,color:0xfff3d6})); lamp.position.set(a.x,t.y+11.5,a.z); lamp.scale.set(14,14,1); g.add(lamp);
+        const col1=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,12,6),M2(0xd8dce6)); const b=polar(s,t.r+1); col1.position.set(b.x,t.y+4,b.z); g.add(col1); } });
+  }
+  if(K.kind==='palms'){
+    // palm trees behind the outfield and a low brick wall: an old southern ballpark
+    const trunkM=M2(0x7a5a3a), leafM=M2(0x2f7a3a,{side:THREE.DoubleSide});
+    for(let s=-40;s<=40;s+=6.5){ const t=top(s), p=polar(s+(s%13?1.5:-1.5),t.r+6+(Math.abs(s)%3)*3), h=14+(Math.abs(s*7)%6);
+      const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.55,h,6),trunkM); tr.position.set(p.x,t.y+h/2-2,p.z); tr.rotation.z=((s*13)%5-2)*0.03; g.add(tr);
+      for(let k=0;k<7;k++){ const lf=new THREE.Mesh(new THREE.ConeGeometry(0.9,6,4,1,true),leafM); lf.position.set(p.x,t.y+h-2,p.z); lf.rotation.set(1.1,k/7*Math.PI*2,0,'YXZ'); lf.translateY(2.6); g.add(lf); } }
+  }
+  if(K.kind==='lake'){
+    // a tree line and a lake behind the outfield
+    const treeM=M2(0x1f4d2a), treeM2=M2(0x2a6034), water=new THREE.Mesh(new THREE.RingGeometry(top(0).r+26,420,48,1,Math.PI*0.18,Math.PI*0.64).rotateX(-Math.PI/2),M2(0x16304a,{roughness:.15,metalness:.4}));
+    water.position.set(0,0.3,0); g.add(water);
+    for(let s=-60;s<=60;s+=3.2){ const t=top(s), p=polar(s,t.r+5+(Math.abs(s*17)%9)), h=9+(Math.abs(s*11)%7);
+      const tree=new THREE.Mesh(new THREE.SphereGeometry(h*0.45,8,6),(Math.abs(s*3)|0)%2?treeM:treeM2); tree.position.set(p.x,t.y+h*0.7,p.z); tree.scale.y=1.25; g.add(tree); }
+  }
+  if(K.kind==='twodeck'){
+    // an upper deck with an LED ribbon between the tiers
+    const pos=[], colr=[], cu=col(K.seat[1]), cd=col(K.riser);
+    for(let s=-88;s<88;s+=2){ const s2=s+2, A=top(s), B=top(s2);
+      for(let i=0;i<10;i++){ const r1=A.r+2+i*1.0, r2=B.r+2+i*1.0, y1=A.y+6+i*0.7, y2=B.y+6+i*0.7, a1=polar(s,r1), b1=polar(s,r1+1), a2=polar(s2,r2), b2=polar(s2,r2+1);
+        [[a1,y1],[b1,y1],[a2,y2],[a2,y2],[b1,y1],[b2,y2]].forEach(([p,y])=>{ pos.push(p.x,y,p.z); colr.push(i%2?cu.r:cd.r,i%2?cu.g:cd.g,i%2?cu.b:cd.b); }); } }
+    const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('color',new THREE.Float32BufferAttribute(colr,3)); geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,side:THREE.DoubleSide})));
+    const led=new THREE.Mesh(arcStrip(s=>top(s).r+1.6,0,1.4,-88,88,2,60),new THREE.MeshBasicMaterial({color:col(K.trim),side:THREE.DoubleSide,toneMapped:false}));
+    led.position.y=0; led.geometry.translate(0,0,0); led.onBeforeRender=()=>{}; S3.parkLed=led; g.add(led);
+    led.geometry.attributes.position.array.forEach((v,i,arr)=>{ if(i%3===1){ const vi=(i-1)/3, x=arr[i-1], z=arr[i+1], s=Math.atan2(x,-z)/D2R; arr[i]=v+top(s).y+3.2; } }); led.geometry.attributes.position.needsUpdate=true;
+  }
+  if(K.kind==='mountains'){
+    // misty ridges beyond the outfield: a windy city under the hills
+    [[300,0x2a3456,90],[380,0x222a46,130],[460,0x1b2138,170]].forEach(([d,c,hgt],k)=>{ const pos=[]; for(let s=-80;s<=80;s+=4){ const a=polar(s,d), h=hgt*(0.45+0.55*Math.abs(Math.sin(s*0.09+k*1.7)*Math.cos(s*0.05+k)));
+        pos.push(a.x,-5,a.z,a.x,h,a.z); }
+      const idx=[]; for(let i=0;i<pos.length/6-1;i++){ const q=i*2; idx.push(q,q+1,q+2,q+1,q+3,q+2); }
+      const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals();
+      g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide,fog:true}))); });
+  }
+  return K;
+}
 function rollWeather(){ const r=rnd(); return r<.34?'clear':r<.5?'dusk':r<.67?'rain':r<.8?'fog':r<.9?'windOut':'windIn'; }
 function applyWeather(k){
   const Wx=WEATHERS[k]||WEATHERS.clear, pa=S3.sky.geometry.attributes.position, ca=S3.sky.geometry.attributes.color, top=col(Wx.top), hor=col(Wx.hor);
@@ -2441,7 +2519,7 @@ function newGame(hi,ai,li,diff,attract){
     mood:'idle',moodT:0,marq:{s:'',x:0},board:null,fwT:0,over:false,flash:0,show:null,
     clock:0,beatPos:0,bpm:132,camMode:attract?'orbit':'fly',camT:0,play:null,foul:null,lastSwingT:-9,relClock:null,
     seen:{},coinsEarned:0};
-  G.weather=rollWeather(); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
+  const park=buildPark(home.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:'今晚主場',color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
   G.sq={home:squadOf(hi,!attract),away:squadOf(ai,false)};
   if(li!=null&&!attract) G.sq.home.cap=clamp(li,0,G.sq.home.girls.length-1);
   const capG=G.sq.home.girls[G.sq.home.cap];
@@ -5118,7 +5196,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010113354', box=document.getElementById('upd');
+  const BUILD='20261010114511', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
