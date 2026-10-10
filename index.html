@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.14（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.15（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.14（2026.10.10）</div>
+    <div class="ver">版本 2.15（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2732,7 +2732,14 @@ function nextPitch(){
   }else{ G.phase='choose'; G.t=0; G.penOpen=false; }
 }
 /* ---------- pitching changes & light show ---------- */
-const CLOSER_FX={TB:'strobe',BB:'march',WH:'wave',SG:'fan',LC:'disco',TY:'laser'};
+// every club's closer has his own entrance: where he comes from, how he gets to the mound, his signature, the lights
+const CLOSER_STYLE={
+  TB:{fx:'strobe',from:[9,-36],gait:'sprint',sig:'hammer',title:'雷神降臨',c:'#FFF6A0'},
+  BB:{fx:'march',from:[-9,-36],gait:'stomp',sig:'roar',title:'黑熊出閘',c:'#FF5A2A'},
+  WH:{fx:'wave',from:[-7,-34],gait:'jog',sig:'surf',title:'巨鯨浮現',c:'#3AA8FF'},
+  SG:{fx:'fan',from:[8,-34],gait:'glide',sig:'wings',title:'海鷗展翅',c:'#3CFF9A'},
+  LC:{fx:'disco',from:[-7,-34],gait:'prowl',sig:'claw',title:'石虎出擊',c:'#FF4FD8'},
+  TY:{fx:'laser',from:[0,-58],gait:'spin',sig:'spin',title:'颶風來襲',c:'#5EF2FF'}};
 function pitchChange(T,side,penIdx,then){
   T.pen=T.pen.filter(i=>i!==penIdx);
   const p=T.pitchers[penIdx]; p.pc=0; T.pitcher=p;
@@ -2741,7 +2748,7 @@ function pitchChange(T,side,penIdx,then){
   const old=G.fielders[0]; if(old) old.root.visible=false;
   G.fielders[0]=f; const left=p.throws==='L';
   placeFig(f,0,-18.44+0.05,left?Math.PI/2:-Math.PI/2,0.25); f.home=f.root.position.clone(); f.mode='pitch';
-  G.show={p,T,big,t:0,dur:big?10500:3000,fx:CLOSER_FX[T.id]||'sweep'};
+  const st=CLOSER_STYLE[T.id]||CLOSER_STYLE.TB; G.show={p,T,big,t:0,dur:big?10500:3000,fx:st.fx,st};
   setMarquee(big?`終結者登場　${p.nick||p.name}　${p.name}　#${p.num}`:`投手更換　${p.name}　#${p.num}`);
   if(big){ drawAds({c1:T.hud,c2:T.c2,name:p.name,nick:p.nick||'CLOSER'}); showMusic(10,true); leaderShout(fillT(SHOUT_T.closerIn,{pn:p.short||p.name}),true); }
   else showMusic(2.6,false);
@@ -3581,8 +3588,14 @@ function startTrot(pl,done){
   mates.forEach((f,i)=>{ const x=-1.6+i*1.1; placeFig(f,x,1.6,faceYaw(x,1.6,-6,-6)); f.from=null; f.spr=null; f.mode='mate'; });
   bf.root.visible=true; bf.root.position.set(0.3,0,0); setMode(bf,'trot',0.1);
   setFace(bf,'shout');
-  const pool=['fist','raise','fflip','bflip','chest','sky'], h=hashStr(bf.p.id); const acts=[pool[h%6],pool[(h>>3)%6],pool[(h>>6)%6]]; if(bf.p.star) acts[1]=h%2?'fflip':'bflip';
-  G.trot={acts,act:null,t:0,fig:bf,path:[new V3(0.3,0,0),BASES[1].clone(),BASES[2].clone(),BASES[3].clone(),new V3(0,0,0.3)],seg:0,s:0,speed:FAST()?11:7.6,mates,done,arrive:null};
+  // his own gestures: one leaving first, one between second and third, one rounding third
+  const pool=['fist','sky','dugout','arrow','chest','helmet','salute','clap'], h=hashStr(bf.p.id); const acts=[pool[h%8],pool[(h>>3)%8],pool[(h>>6)%8]];
+  // a jogger's line: wide around each bag (it still touches it), not corner to corner
+  const curve=new THREE.CatmullRomCurve3([new V3(0.3,0,0),new V3(10.5,0,-8.6),BASES[1].clone(),new V3(10.2,0,-30.2),BASES[2].clone(),new V3(-10.2,0,-30.2),BASES[3].clone(),new V3(-10.5,0,-8.6),new V3(0,0,0.25)],false,'centripetal');
+  const L=curve.getLength(), baseS=[1,2,3].map(b=>{ let best=0,bd=1e9; for(let i=0;i<=400;i++){ const p=curve.getPointAt(i/400), d=p.distanceTo(BASES[b]); if(d<bd){ bd=d; best=i/400*L; } } return best; });
+  const coach=(p,x,z)=>{ const c=figFor(p,T,side,'coach'); placeFig(c,x,z,faceYaw(x,z,0,-19.4)); c.from=null; c.spr=null; c.mode='coach'; return c; };
+  const coaches=[coach(T.pitchers[1],23.6,-14.4),coach(T.pitchers[2],-23.6,-14.4)];
+  G.trot={acts,act:null,t:0,fig:bf,curve,L,baseS,s:0,passed:0,speed:FAST()?12:10.2,mates,coaches,done,arrive:null};
   G.phase='trot'; G.camMode='trot'; G.camT=0; G.camLook=new V3(0,1,0);
   setMood('jump',12000); G.fwT=Math.max(G.fwT,5);
   if(userBatting()) leaderShout(fillT(SHOUT_T.trot,{n:curBatter().short}),true);
@@ -3590,33 +3603,40 @@ function startTrot(pl,done){
 function updateTrot(dt){
   const Tr=G.trot, f=Tr.fig; Tr.t+=dt;
   if(Tr.arrive==null){
-    let adv=Tr.speed*dt/1000*1.7;
-    const flipping=Tr.act&&(Tr.act.type==='fflip'||Tr.act.type==='bflip')&&Tr.t-Tr.act.t0<750;
-    if(flipping) adv*=0.15; else if(Tr.act&&Tr.t-Tr.act.t0<800) adv*=0.65;
-    while(adv>0&&Tr.seg<4){ const a=Tr.path[Tr.seg], b=Tr.path[Tr.seg+1], L=a.distanceTo(b), rem=L-Tr.s; if(adv<rem){ Tr.s+=adv; adv=0; } else { adv-=rem; Tr.seg++; Tr.s=0; if(Tr.seg<4){ Tr.act={type:Tr.acts[Tr.seg-1],t0:Tr.t}; sfx('cheer'); } } }
-    if(Tr.seg>=4){ Tr.arrive=Tr.t; f.root.position.copy(Tr.path[4]); f.yaw=faceYaw(0,0,Tr.mates.length?Tr.mates[0].root.position.x:0,2); sfx('roar'); popup('歡迎回家！',{color:batTeam().hud,size:48,y:300,dur:1500}); }
-    else { const a=Tr.path[Tr.seg], b=Tr.path[Tr.seg+1], u=Tr.s/a.distanceTo(b); f.root.position.set(lerp(a.x,b.x,u),0,lerp(a.z,b.z,u)); f.yaw=faceYaw(a.x,a.z,b.x,b.z); }
+    // he admires it for a moment, eases into a jog, slows for the coaches and for his gesture
+    const t=Tr.t/1000, start=t<1.1?0.18:t<2.0?lerp(0.18,1,(t-1.1)/0.9):1;
+    const nearCoach=Tr.coaches.some(c=>c.root.position.distanceTo(f.root.position)<5), acting=Tr.act&&Tr.t-Tr.act.t0<900;
+    Tr.s+=Tr.speed*dt/1000*start*(nearCoach?0.7:acting?0.8:1)*(Tr.s>Tr.L-4?0.75:1);
+    while(Tr.passed<3&&Tr.s>=Tr.baseS[Tr.passed]){ Tr.act={type:Tr.acts[Tr.passed],t0:Tr.t}; Tr.passed++; sfx('cheer'); }
+    if(Tr.s>=Tr.L){ Tr.arrive=Tr.t; f.root.position.set(0,0,0.25); f.yaw=faceYaw(0,0,Tr.mates.length?Tr.mates[0].root.position.x:0,2); sfx('roar'); popup('歡迎回家！',{color:batTeam().hud,size:48,y:300,dur:1500}); }
+    else { const u=Tr.s/Tr.L, p=Tr.curve.getPointAt(u), q=Tr.curve.getPointAt(Math.min(1,u+0.004)); f.root.position.set(p.x,0,p.z); f.yaw=t<1.1?faceYaw(p.x,p.z,8,-60):faceYaw(p.x,p.z,q.x,q.z); }
   }
   if(Tr.arrive!=null&&Tr.t-Tr.arrive>Math.max(1900,700+Tr.mates.length*500+700)) endTrot();
 }
-function endTrot(){ const Tr=G.trot; if(!Tr) return; G.trot=null; G.phase='idle'; G.camMode='bat'; Tr.done&&Tr.done(); }
+function endTrot(){ const Tr=G.trot; if(!Tr) return; Tr.coaches.forEach(c=>c.root.visible=false); G.trot=null; G.phase='idle'; G.camMode='bat'; Tr.done&&Tr.done(); }
 function trotFigures(dt){
   const Tr=G.trot; if(!Tr) return; const f=Tr.fig, cel=CELEB_ARMS[f.p.celeb]||CELEB_ARMS.fist;
   if(Tr.arrive==null){
-    f.runPh=(f.runPh||0)+dt*11; let p=runPose(f.runPh,0.14); f.noSpring=false;
-    const A=Tr.act, u=A?(Tr.t-A.t0)/1000:9;
-    if(A&&(A.type==='fflip'||A.type==='bflip')&&u<0.75){
-      const k=u/0.75, dir=A.type==='fflip'?1:-1;
-      p=P({rx:dir*Math.PI*2*easeOut(k*1.05),lift:Math.sin(k*Math.PI)*0.95,hy:-0.25,sp:[0.6*dir,0,0],lf:[0.12,0.55,0.25],rf:[-0.12,0.55,0.25],lk:[0.2,1.4,1.2],rk:[-0.2,1.4,1.2],lh:[0.2,1.0,0.4],rh:[-0.2,1.0,0.4],le:[0.5,1.2,0],re:[-0.5,1.2,0]});
-      f.noSpring=true;
-    }else if(A&&u<0.85){
-      const pump=Math.abs(Math.sin(u*Math.PI*4));
-      if(A.type==='fist') Object.assign(p,{rh:[-0.15,1.55+pump*0.5,0.35],re:[-0.6,1.3,0],lh:[0.15,1.55+(1-pump)*0.5,0.35],le:[0.6,1.3,0]});
-      else if(A.type==='raise') Object.assign(p,{lh:[0.28,1.75+pump*0.3,0.12],rh:[-0.28,1.75+pump*0.3,0.12],le:[0.7,1.45,-0.2],re:[-0.7,1.45,-0.2],hd:[-0.25,0,0]});
+    const t=Tr.t/1000; f.noSpring=false;
+    // a home-run jog: upright, shorter stride, arms low; a walk while he watches it go
+    f.runPh=(f.runPh||0)+dt*(t<1.1?6:9.5); let p=t<1.1?WALK(f.runPh):lp(STAND,runPose(f.runPh,0.05),0.62);
+    if(t<1.1) Object.assign(p,{hd:[-0.35,0,0]});
+    const A=Tr.act, u=A?(Tr.t-A.t0)/1000:9, pump=Math.abs(Math.sin(u*Math.PI*4));
+    if(A&&u<0.9){
+      if(A.type==='fist') Object.assign(p,{rh:[-0.15,1.55+pump*0.5,0.35],re:[-0.6,1.3,0]});
+      else if(A.type==='sky') Object.assign(p,CELEB_ARMS.sky);
+      else if(A.type==='dugout') Object.assign(p,{rh:[-0.55,1.5,0.5],re:[-0.5,1.4,0.3],hd:[-0.1,-0.4,0]});
+      else if(A.type==='arrow'){ const pull=u<0.45; Object.assign(p,{lh:[0.75,1.45,0.25],le:[0.45,1.45,0.1],rh:pull?[0.0,1.45,0.05]:[-0.35,1.5,-0.1],re:[-0.4,1.45,-0.2],hd:[0,0.5,0]}); }
       else if(A.type==='chest'){ const hit=Math.max(0,Math.sin(u*Math.PI*6)); Object.assign(p,{rh:[-0.08,1.38,0.14+hit*0.12],re:[-0.5,1.2,0.3],lh:[0.08,1.38,0.14+(1-hit)*0.12],le:[0.5,1.2,0.3],hd:[-0.2,0,0]}); }
-      else Object.assign(p,CELEB_ARMS.sky);
+      else if(A.type==='helmet') Object.assign(p,{rh:[-0.06,1.86,0.06],re:[-0.6,1.62,0.15],hd:[0.15,0,0]});
+      else if(A.type==='salute') Object.assign(p,{rh:[-0.12,1.74,0.16],re:[-0.62,1.62,0.1],hd:[-0.1,0,0]});
+      else { const c=Math.abs(Math.sin(u*Math.PI*6)); Object.assign(p,{lh:[0.06+c*0.12,1.4,0.38],rh:[-0.06-c*0.12,1.4,0.38],le:[0.5,1.2,0.15],re:[-0.5,1.2,0.15]}); }
     }
-    if(Tr.seg===3&&Tr.s>15&&!A) Object.assign(p,CELEB_ARMS.sky);
+    // a slap of hands with the base coach as he goes by
+    const cn=Tr.coaches.find(c=>c.root.position.distanceTo(f.root.position)<3.4);
+    if(cn){ const right=cn.root.position.x>0; if(right) Object.assign(p,{rh:[-0.55,1.35,0.25]}); else Object.assign(p,{lh:[0.55,1.35,0.25]}); if(!cn.slap){ cn.slap=Tr.t; if(AU.ctx&&AU.on) INS.clap(AU.ctx.currentTime+0.15,.6); } }
+    // both feet onto the plate
+    if(Tr.s>Tr.L-2.2) Object.assign(p,CELEB_ARMS.sky,{lift:Math.sin(clamp((Tr.s-(Tr.L-2.2))/2.2,0,1)*Math.PI)*0.35});
     drive(f,p,dt);
   }
   // welcome home: teammates gather round, the scorer high-fives each one in turn, the rest clap and jump
@@ -3631,6 +3651,11 @@ function trotFigures(dt){
     drive(f,p,dt);
     if(slot>=0&&slot!==Tr.slapped&&su>0.5){ Tr.slapped=slot; if(AU.ctx&&AU.on){ INS.clap(AU.ctx.currentTime,.7); INS.clap(AU.ctx.currentTime+.012,.5); } }
   }
+  // the base coaches clap him around and reach out as he passes
+  Tr.coaches.forEach(c=>{ const d=c.root.position.distanceTo(f.root.position), near=Tr.arrive==null&&d<6;
+    if(near) c.yaw=faceYaw(c.root.position.x,c.root.position.z,f.root.position.x,f.root.position.z);
+    const cl=Math.abs(Math.sin(G.clock/180));
+    drive(c,near&&d<3.6?P({hy:-0.04,rh:[-0.3,1.4,0.55],re:[-0.5,1.3,0.3],lh:[0.3,1.4,0.55],le:[0.5,1.3,0.3]}):P({hy:-0.05,lh:[0.06+cl*0.1,1.3,0.35],rh:[-0.06-cl*0.1,1.3,0.35],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1]}),dt); });
   Tr.mates.forEach((m,i)=>{
     if(Tr.arrive==null){ const b=(G.clock/400+i*.3)%1, c=Math.sin(b*Math.PI*2); drive(m,P({hy:-0.05,lh:[0.04,1.25+c*.05,0.35],rh:[-0.04,1.25-c*.05,0.35],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1]}),dt); return; }
     const fp=f.root.position, ang=Math.PI*0.65*((n>1?i/(n-1):0.5)-0.5)+Math.PI, tgt=new V3(fp.x+Math.sin(ang)*0.95,0,fp.z+Math.cos(ang)*0.95);
@@ -3659,7 +3684,8 @@ function updateShow(dt){
     L.hemi.intensity=L.base[0]*dim; L.key.intensity=L.base[1]*dim; L.fill.intensity=L.base[2]*dim; L.back.intensity=L.base[3]*dim;
     S3.glows.forEach(g=>g.material.opacity=dim); S3.lampMat.color.setScalar(Math.max(.15,dim));
     const on=t>1.0&&t<9.8, beat=t*136/60, beatF=beat%1, fx=S.fx||'sweep', fp=G.fielders[0].root.position;
-    const cA=col(T.hud), cB=col(T.c3), cC=col('#FF3D7F'), follow=(t>2.2&&t<6.2)||(t>8.6&&t<9.8);
+    const cA=col(T.hud), cB=col(T.c3), cC=col((S.st&&S.st.c)||'#FF3D7F'), follow=(t>2.2&&t<6.2)||(t>8.6&&t<9.8);
+    if(fx==='strobe'&&t>1.2&&t<6&&Math.floor(beat*2)!==S.lb){ S.lb=Math.floor(beat*2); if(S.lb%5===0){ G.flash=0.75; sfx('crack'); } }
     S3.beams.forEach((b,i)=>{
       b.visible=on; if(!on) return; const n=S3.beams.length, k=i/(n-1)-.5; let tx,tz, op=0.22+0.18*(beatF<.2?1:0);
       if(follow){ tx=fp.x+Math.sin(t*3+i)*2; tz=fp.z+Math.cos(t*3+i)*2; }
@@ -3813,6 +3839,28 @@ function updateCatcher(dt){
     if(left) p.rh=[lx-0.1,ly,0.52]; else p.lh=[lx+0.1,ly,0.52]; }
   drive(c,p,dt);
 }
+// the closer's signature move on the mound (k: 0..1.6 s)
+function closerSig(sig,k,S){
+  const once=(n,fn)=>{ if(!S['s'+n]){ S['s'+n]=true; fn(); } };
+  if(sig==='hammer'){ // both fists up, then the thunder hammer comes down
+    if(k<0.8) return P({hy:-0.05,sp:[-0.15,0,0],hd:[-0.35,0,0],lh:[0.18,2.15,0.1],rh:[-0.18,2.15,0.1],le:[0.5,1.75,-0.1],re:[-0.5,1.75,-0.1]});
+    once(1,()=>{ G.flash=1; G.shake=0.35; sfx('boom'); sfx('crackBig'); });
+    return P({hy:-0.32,sp:[0.6,0,0],hd:[0.25,0,0],lh:[0.18,0.75,0.5],rh:[-0.18,0.75,0.5],le:[0.45,1.05,0.3],re:[-0.45,1.05,0.3],lk:[0.6,0.6,1.2],rk:[-0.6,0.6,1.2]}); }
+  if(sig==='roar'){ // claws wide and a roar, then pounding the chest
+    if(k<0.7){ once(1,()=>{ sfx('boom'); G.shake=0.25; }); return P({hy:-0.18,sp:[-0.2,0,0],hd:[-0.45,0,0],lh:[0.8,1.75,0.3],rh:[-0.8,1.75,0.3],le:[0.6,1.45,0.1],re:[-0.6,1.45,0.1]}); }
+    const b=Math.floor(k*6)%2; if(Math.floor(k*6)!==S.beatN){ S.beatN=Math.floor(k*6); if(AU.ctx&&AU.on) INS.taiko(AU.ctx.currentTime,.6); }
+    return P({hy:-0.1,sp:[0.1,0,0],lh:b?[0.12,1.35,0.3]:[0.3,1.0,0.2],rh:b?[-0.3,1.0,0.2]:[-0.12,1.35,0.3],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1]}); }
+  if(sig==='surf'){ // arms ride a wave across the body, then the whale's spout
+    const w=Math.sin(k*6); once(1,()=>{ setTimeout(()=>{ if(G.fielders&&G.fielders[0]){ const hp=G.fielders[0].root.position.clone().add(new V3(0,2.2,0)); spawnSmoke(hp,30); } },700); });
+    return P({hy:-0.12,sp:[0.1,0,0.12*w],hx:0.08*w,lh:[0.75,1.4+0.28*w,0.2],rh:[-0.75,1.4-0.28*w,0.2],le:[0.55,1.35,0],re:[-0.55,1.35,0]}); }
+  if(sig==='wings'){ // full wingspan, three slow beats, a lift on the last
+    const fl=Math.sin(k*7.5)*0.32; return P({hy:-0.04,sp:[-0.1,0,0],hd:[-0.3,0,0],lift:k>1.1?0.12*Math.sin((k-1.1)*6):0,lh:[0.9,1.45+fl,-0.05],rh:[-0.9,1.45+fl,-0.05],le:[0.6,1.45+fl*0.5,-0.3],re:[-0.6,1.45+fl*0.5,-0.3]}); }
+  if(sig==='claw'){ // the wildcat: low crouch and two fast swipes
+    const sw=k%0.55/0.55, hit=sw<0.35; if(Math.floor(k/0.55)!==S.swN){ S.swN=Math.floor(k/0.55); sfx('whoosh'); }
+    return P({hy:-0.3,sp:[0.5,0,0],hd:[-0.25,0,0],lk:[0.6,0.6,1.2],rk:[-0.6,0.6,1.2],lh:[0.3,1.2,0.45],le:[0.5,1.1,0.2],rh:hit?[-0.45,1.75,0.45]:[0.15,1.0,0.6],re:[-0.5,1.4,0.2]}); }
+  // spin: two turns with the arms out, the lasers spin with him
+  const p=P({hy:-0.06,lh:[0.85,1.45,0.05],rh:[-0.85,1.45,0.05],le:[0.6,1.45,-0.3],re:[-0.6,1.45,-0.3]}); p.ry=easeOut(Math.min(1,k/1.2))*Math.PI*4; return p;
+}
 function pitcherPose(f){
   const left=f.p.throws==='L', K=left?PK_L:PK;
   if(G.cut&&G.cut.type==='react'&&G.cut.data.f===f){ f.yaw=left?Math.PI/2:-Math.PI/2; const u=Math.min(1,G.cut.t/250); return lp(K[0][1],REACT[G.cut.data.pose],ease(u)); }
@@ -3821,18 +3869,25 @@ function pitcherPose(f){
     if(t<walkA){ f.root.visible=false; return K[0][1]; }
     f.root.visible=true;
     if(t<walkB){
-      const u=(t-walkA)/(walkB-walkA), from=big?new V3(-7,0,-34):MOUND.clone().add(new V3(0,0,-16)), e=big?u:ease(u);
+      const st=S.st||CLOSER_STYLE.TB, gait=big?st.gait:'jog', fast=gait==='sprint'||gait==='spin';
+      const u=clamp((t-walkA)/((walkB-walkA)*(fast&&big?0.6:1)),0,1), from=big?new V3(st.from[0],0,st.from[1]):MOUND.clone().add(new V3(0,0,-16)), e=big?u:ease(u);
       f.root.position.set(lerp(from.x,to.x,e),lerp(0,0.25,clamp((u-.7)/.3,0,1)),lerp(from.z,to.z,e));
-      f.baseY=f.root.position.y; f.yaw=Math.atan2(to.x-from.x,to.z-from.z); f.runPh=(f.runPh||0)+(big?0.12:0.18);
-      return big?WALK(f.runPh):(u<.85?runPose(f.runPh,0.18):FSTAND);
+      f.baseY=f.root.position.y; f.yaw=Math.atan2(to.x-from.x,to.z-from.z);
+      if(u>=1){ f.yaw=0; return FSTAND; }
+      f.runPh=(f.runPh||0)+({sprint:0.24,stomp:0.09,jog:0.18,glide:0.16,prowl:0.11,spin:0.2})[gait];
+      if(gait==='sprint') return runPose(f.runPh,0.28);
+      if(gait==='jog') return u<.85?runPose(f.runPh,0.18):FSTAND;
+      if(gait==='glide'){ const p=runPose(f.runPh,0.12), fl=Math.sin(t*7)*0.22; p.lh=[0.85,1.45+fl,-0.05]; p.rh=[-0.85,1.45+fl,-0.05]; p.le=[0.6,1.45,-0.3]; p.re=[-0.6,1.45,-0.3]; return p; }
+      if(gait==='prowl'){ const p=WALK(f.runPh); p.hy=-0.26; p.sp=[0.55,0,0]; p.hd=[-0.45,0,0]; return p; }
+      if(gait==='spin'){ const p=runPose(f.runPh,0.15); p.ry=t*7; p.lh=[0.8,1.45,0.05]; p.rh=[-0.8,1.45,0.05]; return p; }
+      const p=WALK(f.runPh); p.hy=-0.05-0.05*Math.abs(Math.sin(f.runPh)); p.lh=[0.34,1.0,0.1]; p.rh=[-0.34,1.0,0.1]; return p;
     }
     f.root.position.copy(to); f.baseY=0.25; f.yaw=0;
     if(!big) return FSTAND;
-    if(t<7.8){ const k=t-6.2;
+    if(t<7.8){ const k=t-6.2, sig=(S.st||CLOSER_STYLE.TB).sig;
       if(!S.smoked&&k>0.8){ S.smoked=true; const hp=new V3(); f.rHand.getWorldPosition(hp); spawnSmoke(hp,26); }
-      if(k>1.1&&!S.smoke2){ S.smoke2=true; const hp=new V3(); f.rHand.getWorldPosition(hp); spawnSmoke(hp,10); }
-      const bob=Math.max(0,Math.sin(k*10))*0.07;
-      return P({hy:-0.34,sp:[0.6,0.1,0],hd:[0.35,0,0],rh:[-0.16,0.4+bob,0.44],re:[-0.45,0.9,0.3],lh:[0.28,0.92,0.32],le:[0.55,1.1,0.1],lf:[0.17,.08,0.12],rf:[-0.17,.08,-0.06],lk:[0.6,0.6,1.2],rk:[-0.6,0.6,1.2]}); }
+      return closerSig(sig,k,S);
+    }
     if(t<8.6){ const k=t-7.8; return k<0.4?P({rh:[-0.05,1.86,0.12],re:[-0.5,1.5,0.1],hd:[-0.12,0,0]}):P({lh:[0.05,1.32,0.3],rh:[-0.05,1.3+0.07*Math.abs(Math.sin(k*16)),0.33],le:[0.5,1.1,0.1],re:[-0.5,1.1,0.1],hd:[0.1,0,0]}); }
     return CL_POSE;
   }
@@ -4432,7 +4487,7 @@ function drawCelebrateOverlay(c){
 }
 function drawShowOverlay(c){
   const S=G.show; if(!S) return; const t=S.t/1000, p=S.p, T=S.T;
-  if(S.big&&t<3.6){ const a=clamp((t-1.2)*2,0,1); ctx.globalAlpha=a; txt('CLOSER',270,300,64,T.hud,{d:1,w:400,stroke:6,sc:'#07081A'}); txt('終結者登場',270,350,26,'#fff',{stroke:5,sc:'#07081A'}); ctx.globalAlpha=1; return; }
+  if(S.big&&t<3.6){ const a=clamp((t-1.2)*2,0,1); ctx.globalAlpha=a; txt('CLOSER',270,300,64,T.hud,{d:1,w:400,stroke:6,sc:'#07081A'}); txt(S.st?`終結者登場・${S.st.title}`:'終結者登場',270,350,26,S.st?S.st.c:'#fff',{stroke:5,sc:'#07081A'}); ctx.globalAlpha=1; return; }
   const k=(S.big?5.2:1.2), u=clamp((t-k)/1.5,0,1);
   if(t>k){
     slant(FB-150,118,T.hud,'rgba(7,8,26,.9)',u/3);
@@ -5570,7 +5625,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010155812', box=document.getElementById('upd');
+  const BUILD='20261010160254', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
