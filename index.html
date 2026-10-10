@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.2（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.3（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.2（2026.10.10）</div>
+    <div class="ver">版本 2.20.3（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -3910,13 +3910,16 @@ function updateCatcher(dt){
   const c=G.catcher; if(!c) return;
   const pl=G.play;
   if(pl&&!pl.replay&&pl.t>0.3){ c.root.visible=true; const b=pl.ballPos; c.yaw=faceYaw(c.root.position.x,c.root.position.z,b.x,b.z); drive(c,FSTAND,dt); return; }
-  c.yaw=Math.PI; const p=Object.assign({},FCATCH), P=G.pitch;
+  if(G.ret&&!pl){ const k=(G.clock-G.ret.t0)/1000; c.root.visible=!(G.camMode==='bat'&&userBatting());
+    if(k<0.25){ drive(c,FCATCH,dt); return; }
+    if(k<0.9){ const u=(k-0.25)/0.65; drive(c,u<0.45?P({hy:-0.15,sp:[0.15,0,0],rh:[-0.3,1.55,-0.25],re:[-0.5,1.35,-0.3],lh:[0.25,1.2,0.35],le:[0.5,1.1,0.2]}):P({hy:-0.1,sp:[0.3,0,0],rh:[-0.1,1.25,0.55],re:[-0.4,1.2,0.3],lh:[0.25,1.0,0.25]}),dt); return; } }
+  c.yaw=Math.PI; const p=Object.assign({},FCATCH), PP=G.pitch;
   // from the camera behind the plate he would hide the zone: draw him as a ghost there
   const ghost=G.camMode==='bat'&&!(G.phase==='cut'&&G.cut&&G.cut.type!=='intro'), op=ghost?(userBatting()?0:0.2):1;
   if(c.ghostOp!==op){ c.ghostOp=op; c.ghostMats.forEach(m=>{ m.transparent=op<1; m.opacity=op; m.depthWrite=op===1; m.needsUpdate=true; }); }
   c.root.visible=op>0; if(op===0) return;
   // the glove sets up on the target, then follows the ball in
-  const tgt=P&&G.phase==='flight'?P.end3:(!userBatting()&&G.aim?hudToPlate(G.aim.x,G.aim.y):null);
+  const tgt=PP&&G.phase==='flight'?PP.end3:(!userBatting()&&G.aim?hudToPlate(G.aim.x,G.aim.y):null);
   if(tgt){ const lx=clamp(-(tgt.x-c.root.position.x),-0.55,0.55), ly=clamp(tgt.y,0.35,1.25), left=c.p.throws==='L';
     if(left) p.rh=[lx-0.1,ly,0.52]; else p.lh=[lx+0.1,ly,0.52]; }
   drive(c,p,dt);
@@ -4054,10 +4057,15 @@ function updateConfetti(dt){
 /* ---------- ball, prediction, fireworks ---------- */
 function updateBallVisual(){
   const ball=S3.ball, sh=S3.ballSh; let p=null;
+  { const P=G.pitch; if(P&&P.done&&!P.contact&&!G.play&&!P.returned){ P.returned=true; G.ret={t0:G.clock}; } if(G.ret&&G.clock-G.ret.t0>1500) G.ret=null; }
   S3.pred.visible=false;
   if(G.play) p=G.play.ballPos;
   else if(G.foul){ const f=G.foul, t=f.t/1000; p=f.p.clone().addScaledVector(f.v,t); p.y=f.p.y+f.v.y*t-4.9*t*t; if(p.y<0.04) p.y=0.04; }
   else if(G.pitch&&G.pitch.rel&&(G.phase==='flight'||(G.phase==='wait'&&G.pitch.t<G.pitch.dur+200))){ const P=G.pitch; if(P.t<P.dur+220) p=pitchPos(P,P.t); if(G.phase==='flight'&&showPrediction()) drawPredDots(P); }
+  // after a pitch nobody hit, the catcher stands and lobs it back to the mound
+  else if(G.ret&&G.clock-G.ret.t0>=520&&G.clock-G.ret.t0<1450&&G.catcher&&G.fielders&&G.fielders[0]&&!['windup','gauge'].includes(G.phase)){
+    const u=(G.clock-G.ret.t0-520)/930, a=new V3(); (G.catcher.p.throws==='L'?G.catcher.lHand:G.catcher.rHand).getWorldPosition(a);
+    const pf=G.fielders[0], b=new V3(); (pf.gloveHand||pf.lHand).getWorldPosition(b); p=a.lerp(b,u); p.y+=Math.sin(u*Math.PI)*2.2; }
   else if(G.phase==='windup'||G.phase==='choose'||G.phase==='aim'||G.phase==='gauge'){ const pf=G.fielders&&G.fielders[0]; if(pf){ p=new V3(); (pf.p.throws==='L'?pf.lHand:pf.rHand).getWorldPosition(p); } }
   if(!p||G.attract||G.phase==='cut'){ ball.visible=sh.visible=false; S3.trail.visible=false; return; }
   ball.visible=sh.visible=true; ball.position.copy(p);
@@ -5729,7 +5737,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010235246', box=document.getElementById('upd');
+  const BUILD='20261010235407', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
