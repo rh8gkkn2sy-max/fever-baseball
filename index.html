@@ -200,7 +200,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.8（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.9（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -222,7 +222,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.8（2026.10.10）</div>
+    <div class="ver">版本 2.9（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -2927,6 +2927,20 @@ function coverFor(base,busy,spray){
   return order.find(k=>!busy.includes(k));
 }
 const THROW_SPD={inf:28,of:27};
+// play time at which fielder k is standing on base b (he breaks for it 0.25 s into the play)
+function coverAt(k,b){ return k==null?99:0.25+G.fielders[k].home.distanceTo(BASES[b])/6.2+0.1; }
+// a throw arrives when both the ball and the man covering are there
+function throwTo(from,base,to,ready,spd,call){ const dur=from.distanceTo(BASES[base])/spd, arr=Math.max(ready+dur,coverAt(to,base)); return {base,to,at:arr-dur,dur,arr,call}; }
+// an infielder who cannot reach a ground ball still lays out for it
+function missedDive(tr,skip){
+  const F=G.fielders; let best=null;
+  for(let i=0;i<tr.pts.length&&i*tr.dt<2.2;i++){
+    const t=i*tr.dt, p=tr.pts[i]; if(p.y>1.1) continue;
+    for(let k=1;k<5;k++){ if(skip(k)) continue; const f=F[k], spd=FT_TUNE.ig*(.9+(f.p.spd||.6)*.2), reach=FT_TUNE.gr+Math.max(0,t-0.2)*spd+1.6, gap=Math.hypot(p.x-f.home.x,p.z-f.home.z)-reach;
+      if(gap<2&&t>0.35&&(!best||gap<best.gap)) best={k,t,p:p.clone(),gap}; }
+  }
+  return best;
+}
 function startPlay(EV,L,spray,p0,q){
   EV=Math.min(EV,118);
   const tr=simulate(EV,L,spray,p0), bat=curBatter(), rs=runSpeed(bat), F=G.fielders, ob=G.outs;
@@ -2944,30 +2958,31 @@ function startPlay(EV,L,spray,p0,q){
   if(ev&&ev.air&&(!tr.hr||ev.t<tr.wallT)){
     res=L>48?'PO':L<20?'LO':'FO'; tr.hr=false;
     const c2=coverFor(2,[ev.k],spray); plan.covers.push({k:c2,base:2});
-    plan.throws.push({from:ev.k,base:2,to:c2,at:ev.t+0.65,dur:ev.p.distanceTo(BASES[2])/(ev.k>=5?THROW_SPD.of:THROW_SPD.inf)});
+    plan.throws.push(Object.assign({from:ev.k},throwTo(ev.p,2,c2,ev.t+0.65,ev.k>=5?THROW_SPD.of:THROW_SPD.inf)));
   }
   else if(tr.hr) res='HR';
   else if(ev&&ev.k<5&&Math.hypot(ev.p.x,ev.p.z)<48){
     const r1=G.runners[0], busy=[ev.k];
     let forced=false;
     if(G.bases[0]&&ob<2&&r1){
-      const c2=coverFor(2,busy,spray), t2=ev.t+0.45+ev.p.distanceTo(BASES[2])/THROW_SPD.inf, tr1=0.1+24.5/runSpeed(r1);
+      const c2=coverFor(2,busy,spray), x2=c2!=null?throwTo(ev.p,2,c2,ev.t+0.45,THROW_SPD.inf,'OUT'):null, t2=x2?x2.arr:99, tr1=0.1+24.5/runSpeed(r1);
       if(c2!=null&&t2<tr1){
         forced=true; busy.push(c2); plan.covers.push({k:c2,base:2});
-        plan.throws.push({from:ev.k,base:2,to:c2,at:ev.t+0.45,dur:ev.p.distanceTo(BASES[2])/THROW_SPD.inf,call:'OUT'});
+        plan.throws.push(Object.assign({from:ev.k},x2));
         const c1=coverFor(1,busy,spray); plan.covers.push({k:c1,base:1});
-        const t1=t2+0.65+27.43/THROW_SPD.inf;
-        plan.throws.push({from:c2,base:1,to:c1,at:t2+0.65,dur:27.43/THROW_SPD.inf,call:t1<t1B?'OUT':'SAFE'});
+        const x1=throwTo(BASES[2],1,c1,t2+0.65,THROW_SPD.inf), t1=x1.arr; x1.call=t1<t1B?'OUT':'SAFE';
+        plan.throws.push(Object.assign({from:c2},x1));
         res=t1<t1B?'DP':'FC'; if(res==='DP') plan.hl={type:'dp',title:'雙殺守備！'};
       }
     }
     if(!forced){
       const self=ev.k===1&&ev.p.distanceTo(BASES[1])<8;
       const c1=self?1:coverFor(1,busy,spray);
-      const arrive=self?ev.t+ev.p.distanceTo(BASES[1])/6.5:ev.t+0.45+ev.p.distanceTo(BASES[1])/33;
+      const x1=self?null:throwTo(ev.p,1,c1,ev.t+0.45,33);
+      const arrive=self?ev.t+ev.p.distanceTo(BASES[1])/6.5:x1.arr;
       res=arrive<t1B?'GO':'1B';
       if(self) plan.selfTag={k:1,base:1,at:ev.t};
-      else { plan.covers.push({k:c1,base:1}); plan.throws.push({from:ev.k,base:1,to:c1,at:ev.t+0.45,dur:ev.p.distanceTo(BASES[1])/33,call:res==='GO'?'OUT':'SAFE'}); }
+      else { x1.call=res==='GO'?'OUT':'SAFE'; plan.covers.push({k:c1,base:1}); plan.throws.push(Object.assign({from:ev.k},x1)); }
     }
   }else{
     const tp=ev?ev.t:4, pp=ev?ev.p:tr.pts[tr.pts.length-1];
@@ -2982,7 +2997,9 @@ function startPlay(EV,L,spray,p0,q){
       else { extra.toThird={out:tThrow<tRun-0.12}; tb=3; }
       if(extra.toThird&&extra.toThird.out) plan.hl={type:'throwout',title:'三壘阻殺！'};
     }
-    if(ev){ const c=coverFor(tb,[ev.k],spray); plan.covers.push({k:c,base:tb}); plan.throws.push({from:ev.k,base:tb,to:c,at:tp+0.9,dur:pp.distanceTo(BASES[tb])/THROW_SPD.of,call:extra.toThird?(extra.toThird.out?'OUT':'SAFE'):null}); }
+    if(ev){ const c=coverFor(tb,[ev.k],spray); plan.covers.push({k:c,base:tb}); plan.throws.push(Object.assign({from:ev.k},throwTo(pp,tb,c,tp+0.9,THROW_SPD.of,extra.toThird?(extra.toThird.out?'OUT':'SAFE'):null))); }
+    // a ball through the infield: the nearest infielder still dives for it
+    if(!tr.hr&&(!ev||ev.k>=5)){ const md=missedDive(tr,k=>plan.covers.some(c=>c.k===k)); if(md) plan.miss=md; }
   }
   // spectacular plays: dives at the edge of range, leaping grabs
   if(ev&&!plan.hl&&ev.k>=1&&(res==='FO'||res==='LO'||res==='PO'||res==='GO'||res==='DP'||res==='FC')){
@@ -3554,7 +3571,22 @@ function updateFigures(dt){
 function fielderInPlay(f,i,pl,dt){
   const ev=pl.ev, t=pl.t, F=G.fielders, th=pl.plan.throws, hl=pl.plan.hl;
   const myThrow=th.find(x=>x.from===i&&t>=x.at-0.3&&t<x.at+0.4);
-  const myCover=pl.plan.covers.find(c=>c.k===i);
+  const myCover=pl.plan.covers.find(c=>c.k===i), ms=pl.plan.miss;
+  // lay out for a ball he can't quite reach, then pick himself up
+  if(ms&&ms.k===i&&t<ms.t+1.15){
+    const home=f.home, dir=new V3(ms.p.x-home.x,0,ms.p.z-home.z), D=dir.length(); dir.normalize();
+    const runTo=Math.max(0,D-ms.gap-2.2), t0=0.2, td=ms.t-0.28;
+    f.yaw=Math.atan2(dir.x,dir.z);
+    if(t<t0){ drive(f,FREADY,dt); return; }
+    if(t<td){ const u=clamp((t-t0)/Math.max(.05,td-t0),0,1); f.root.position.set(home.x+dir.x*runTo*u,0,home.z+dir.z*runTo*u); if(f.mode!=='run') setMode(f,'run',0.12); f.runPh=(f.runPh||0)+dt*13; drive(f,runPose(f.runPh),dt); return; }
+    f.noSpring=true;
+    const k=clamp((t-td)/0.38,0,1); f.root.position.set(home.x+dir.x*(runTo+1.5*easeOut(k)),0,home.z+dir.z*(runTo+1.5*easeOut(k)));
+    if(t<ms.t+0.55) drive(f,lp(FREADY,DIVE,ease(Math.min(1,k*1.4))),dt);
+    else drive(f,lp(DIVE,FREADY,ease((t-ms.t-0.55)/0.6)),dt);
+    if(!ms.sfx&&t>=ms.t){ ms.sfx=true; if(!pl.replay) sfx('tick'); }
+    return;
+  }
+  if(ms&&ms.k===i) f.noSpring=false;
   if(i===ev.k){
     const react=i<5?0.22:0.35, tgt=ev.p, start=f.home;
     const special=hl&&(hl.type==='dive'||hl.type==='jump'||hl.type==='rob');
@@ -5264,7 +5296,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010135333', box=document.getElementById('upd');
+  const BUILD='20261010141257', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
