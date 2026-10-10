@@ -199,7 +199,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.6（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.7（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -221,7 +221,7 @@ body{background:var(--night);color:var(--ink);font-family:var(--f-body);margin:0
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.6（2026.10.10）</div>
+    <div class="ver">版本 2.7（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -1656,6 +1656,7 @@ const WEATHERS={
 const PARKS={
   TB:{n:'雷鳥城堡',kind:'castle',seat:['#1e4fb8','#2a62d6'],riser:'#0d1f4e',wall:'#0b1f4a',trim:'#4fb3ff'},
   TBD:{n:'台北巨蛋',kind:'dome',seat:['#2f3f86','#243270'],riser:'#161c40',wall:'#0b1f4a',trim:'#ffd21f'},
+  TBT:{n:'天母球場',kind:'tianmu',seat:['#2f6b4a','#3d7d58'],riser:'#16301f',wall:'#173a2a',trim:'#ffc81e'},
   BB:{n:'黑熊洲際球場',kind:'canopy',seat:['#1f5a45','#2a6e55'],riser:'#10261f',wall:'#0e2a26',trim:'#e9c24f',board:1.45},
   WH:{n:'鯨浪府城球場',kind:'palms',seat:['#c0612b','#a8521f'],riser:'#3a1e10',wall:'#123a5a',trim:'#5ac8ff'},
   SG:{n:'海鷗湖畔球場',kind:'lake',seat:['#2b6a3a','#3a7d48'],riser:'#142a18',wall:'#0e2a26',trim:'#ff3b4e'},
@@ -1734,6 +1735,22 @@ function buildPark(id){
     led.position.y=0; led.geometry.translate(0,0,0); led.onBeforeRender=()=>{}; S3.parkLed=led; g.add(led);
     led.geometry.attributes.position.array.forEach((v,i,arr)=>{ if(i%3===1){ const vi=(i-1)/3, x=arr[i-1], z=arr[i+1], s=Math.atan2(x,-z)/D2R; arr[i]=v+top(s).y+3.2; } }); led.geometry.attributes.position.needsUpdate=true;
   }
+  if(K.kind==='tianmu'){
+    // an older, cosy ground at the foot of the hills: a wooded slope behind the outfield
+    // and a row of old light poles
+    const hillM=new THREE.MeshBasicMaterial({color:0x1d3a2a,side:THREE.DoubleSide,fog:true}), treeM=M2(0x24502f), treeM2=M2(0x2e5f38);
+    [[250,70,0],[330,120,1.3]].forEach(([d,hgt,k])=>{ const pos=[]; for(let s=-85;s<=85;s+=5){ const a=polar(s,d), h=hgt*(0.55+0.45*Math.abs(Math.sin(s*0.05+k)))*(1-Math.abs(s)/170);
+        pos.push(a.x,-5,a.z,a.x,h,a.z); }
+      const idx=[]; for(let i=0;i<pos.length/6-1;i++){ const q=i*2; idx.push(q,q+1,q+2,q+1,q+3,q+2); }
+      const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); g.add(new THREE.Mesh(geo,k?new THREE.MeshBasicMaterial({color:0x16281f,side:THREE.DoubleSide,fog:true}):hillM)); });
+    for(let s=-70;s<=70;s+=2.6){ const t=top(s), p=polar(s,t.r+4+(Math.abs(s*13)%10)), h=7+(Math.abs(s*7)%6);
+      const tree=new THREE.Mesh(new THREE.SphereGeometry(h*0.42,7,5),(Math.abs(s*5)|0)%2?treeM:treeM2); tree.position.set(p.x,t.y+h*0.55,p.z); tree.scale.y=1.2; g.add(tree); }
+    const poleM=M2(0x8a8f96,{metalness:.4});
+    [-62,-28,28,62].forEach(s=>{ const t=top(s), p=polar(s,t.r+3), h=t.y+20;
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(.5,.9,h,6),poleM); pole.position.set(p.x,h/2,p.z); g.add(pole);
+      const head=new THREE.Mesh(new THREE.BoxGeometry(6,3,.6),poleM); head.position.set(p.x,h+1.5,p.z); head.rotation.y=-s*D2R; g.add(head);
+      const lamp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false,color:0xfff0c8})); lamp.position.set(p.x,h+1.5,p.z); lamp.scale.set(16,12,1); g.add(lamp); });
+  }
   if(K.kind==='mountains'){
     // misty ridges beyond the outfield: a windy city under the hills
     [[300,0x2a3456,90],[380,0x222a46,130],[460,0x1b2138,170]].forEach(([d,c,hgt],k)=>{ const pos=[]; for(let s=-80;s<=80;s+=4){ const a=polar(s,d), h=hgt*(0.45+0.55*Math.abs(Math.sin(s*0.09+k*1.7)*Math.cos(s*0.05+k)));
@@ -1743,6 +1760,14 @@ function buildPark(id){
       g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide,fog:true}))); });
   }
   return K;
+}
+// where tonight's game is played: the Thunderbirds split Taipei between the castle, the dome and
+// Tianmu; any other club now and then rents the dome for a big home date, as CPBL clubs do
+function pickPark(home,attract){
+  if(attract) return {id:home.id,sub:'今晚主場'};
+  const r=rnd();
+  if(home.id==='TB') return r<.6?{id:'TB',sub:'今晚主場'}:r<.85?{id:'TBD',sub:'雷鳥巨蛋主場'}:{id:'TBT',sub:'雷鳥天母主場'};
+  return r<.07?{id:'TBD',sub:home.city+home.name+'・租借巨蛋主場'}:{id:home.id,sub:'今晚主場'};
 }
 function rollWeather(){ const r=rnd(); return r<.34?'clear':r<.5?'dusk':r<.67?'rain':r<.8?'fog':r<.9?'windOut':'windIn'; }
 function applyWeather(k){
@@ -2535,7 +2560,7 @@ function newGame(hi,ai,li,diff,attract){
     mood:'idle',moodT:0,marq:{s:'',x:0},board:null,fwT:0,over:false,flash:0,show:null,
     clock:0,beatPos:0,bpm:132,camMode:attract?'orbit':'fly',camT:0,play:null,foul:null,lastSwingT:-9,relClock:null,
     seen:{},coinsEarned:0};
-  const park=buildPark(home.id==='TB'&&!attract&&rnd()<.3?'TBD':home.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:'今晚主場',color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
+  const pk=pickPark(home,attract), park=buildPark(pk.id); G.park=park; G.weather=park.kind==='dome'?'clear':rollWeather(); if(!attract) popup(park.n,{sub:pk.sub,color:'#FFD54A',size:40,y:260,dur:2600}); { const Wx=WEATHERS[G.weather]; G.windV=Wx.wind||[0,0]; G.dragK=Wx.drag||1; } applyWeather(G.weather);
   G.sq={home:squadOf(hi,!attract),away:squadOf(ai,false)};
   if(li!=null&&!attract) G.sq.home.cap=clamp(li,0,G.sq.home.girls.length-1);
   const capG=G.sq.home.girls[G.sq.home.cap];
@@ -5212,7 +5237,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010121817', box=document.getElementById('upd');
+  const BUILD='20261010122845', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
