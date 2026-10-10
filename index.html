@@ -226,7 +226,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.10（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.11（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +248,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.10（2026.10.10）</div>
+    <div class="ver">版本 2.11（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -381,7 +381,7 @@ function audioInit(){
     const len=AU.ctx.sampleRate*2, b=AU.ctx.createBuffer(1,len,AU.ctx.sampleRate), d=b.getChannelData(0);
     for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
     AU.nb=b;
-    audioGraph();
+    audioGraph(); loadVoicePack('fx');
   }catch(e){ AU.ctx=null; }
 }
 // wake the audio again when the page comes back from a locked screen or a background tab
@@ -443,8 +443,9 @@ function sfx(n){
   if(n==='kchant'){ [0,.3,.6,.75,.9,1.2,1.5,1.65,1.8].forEach((d,i)=>{ drum(t+d,i%3===2?160:110,.6); noise(t+d,.06,.5,1500,'bandpass'); }); tone(t+.6,880,.2,.12,'square'); tone(t+1.5,880,.2,.12,'square'); }
   if(n==='mitt'){ noise(t,.09,1,800,'bandpass'); }
   if(n==='whoosh'){ noise(t,.16,.25,500,'lowpass'); }
-  if(n==='roar') crowd(2.8,.55);
-  if(n==='cheer') crowd(1.3,.3);
+  if(n==='roar'&&!crowdFx('roar',1.1)) crowd(2.8,.55);
+  if(n==='cheer'&&!crowdFx('cheer',.8)) crowd(1.3,.3);
+  if(n==='ooh') crowdFx('ooh',.9);
   if(n==='clap'){ noise(t,.07,.8,1500,'bandpass'); }
   if(n==='skill'){ for(let i=0;i<8;i++) drum(t+i*.06,140+i*12,.5); tone(t+.5,660,.4,.2,'square'); tone(t+.62,990,.5,.2,'square'); }
   if(n==='horn'){ tone(t,392,.35,.18,'sawtooth'); tone(t+.36,523,.6,.18,'sawtooth'); }
@@ -483,10 +484,12 @@ function audioGraph(){
   AU.master.disconnect(); AU.master.connect(AU.comp);
   AU.mus=c.createGain(); AU.mus.gain.value=.9; AU.mus.connect(AU.comp);
   // generated stadium impulse response
-  const len=c.sampleRate*2.6, ir=c.createBuffer(2,len,c.sampleRate);
-  for(let ch=0;ch<2;ch++){ const d=ir.getChannelData(ch); for(let i=0;i<len;i++){ const t=i/len; d[i]=(Math.random()*2-1)*Math.pow(1-t,2.8)*(i<c.sampleRate*.02?.3:1); } }
+  const sr=c.sampleRate, len=Math.floor(sr*1.7), ir=c.createBuffer(2,len,sr);
+  for(let ch=0;ch<2;ch++){ const d=ir.getChannelData(ch); let lp=0;
+    for(let i=0;i<len;i++){ const t=i/sr, n=(Math.random()*2-1)*Math.exp(-t/.22)*Math.min(1,t/.05), k=.55-.47*Math.min(1,t/.6); lp+=k*(n-lp); d[i]=lp*.9; }
+    for(let j=0;j<14;j++){ const tt=.06+Math.random()*.24; d[Math.floor(tt*sr)]+=(Math.random()<.5?-1:1)*(.25+Math.random()*.35)*Math.exp(-tt*5); } }
   AU.rev=c.createConvolver(); AU.rev.buffer=ir;
-  AU.revIn=c.createGain(); AU.revIn.gain.value=1; AU.revOut=c.createGain(); AU.revOut.gain.value=.32;
+  AU.revIn=c.createGain(); AU.revIn.gain.value=1; AU.revOut=c.createGain(); AU.revOut.gain.value=.2;
   AU.revIn.connect(AU.rev).connect(AU.revOut).connect(AU.comp);
   AU.master.connect(AU.revIn);
 }
@@ -600,12 +603,24 @@ function playStep(s,i,t,v){
     const L=s.len[bar*16+st]*d16*.95;
     INS.brass(t,midiF(n),L,.085*v);
     if(s.style!=='edm') INS.brass(t,midiF(n-12),L,.05*v); else INS.saw(t,[midiF(n)],L,.03*v);
-    if(bar%4===3&&st===12) INS.shout(t,.16*v,'e');
+    if(bar%4===3&&st===12&&!playAt(cKey('嘿！'),t,.55*v)) INS.shout(t,.16*v,'e');
   }
+}
+// recorded-style crowd: cheers, groans and a murmur loop, all built from layered voices (voice/fx.*)
+function crowdFx(k,gain,at){
+  const c=AU.ctx; if(!c||!AU.on) return false; const b=clipBuf(k); if(!b) return false;
+  const s=c.createBufferSource(), g=c.createGain(); s.buffer=b; g.gain.value=gain; s.connect(g).connect(AU.comp); s.start(Math.max(at||0,c.currentTime)); return true;
+}
+function ambTick(){
+  const c=AU.ctx; if(!c) return; const b=clipBuf('amb'); if(!b) return;
+  if(!AU.amb){ const s=c.createBufferSource(), g=c.createGain(); s.buffer=b; s.loop=true; g.gain.value=0; s.connect(g).connect(AU.comp); s.start(); AU.amb={s,g}; }
+  const hot=!G?0:G.attract?.35:G.over?(G.score.home>G.score.away?1.3:.6):G.phase==='play'?1.15:G.chance?1.2:1;
+  AU.amb.g.gain.setTargetAtTime(AU.on?.26*hot:0,c.currentTime,.5);
 }
 // The sequencer follows whatever the game wants to hear (see musicMode)
 setInterval(()=>{
-  const c=AU.ctx; if(!c||!AU.on||typeof G==='undefined'||!G||!AU.mus){ MUS.cur=null; return; }
+  const c=AU.ctx; if(c&&AU.mus) ambTick();
+  if(!c||!AU.on||typeof G==='undefined'||!G||!AU.mus){ MUS.cur=null; return; }
   const want=musicMode();
   if(!want){ MUS.cur=null; return; }
   if(!MUS.cur||MUS.cur.key!==want.key){ const t0=c.currentTime+.06; MUS.cur={song:want.song,key:want.key,t0,next:t0,step:0}; prepSongClips(want.song); }
@@ -621,7 +636,7 @@ const VOICE={v:null};
 function pickVoice(){ try{ const vs=speechSynthesis.getVoices(); VOICE.none=vs.length>0&&!vs.some(v=>/^zh/i.test(v.lang));
   // prefer the downloaded high-quality voices (iOS "Enhanced/Premium", Edge "Natural")
   const score=v=>(/zh[-_]TW/i.test(v.lang)?30:/zh[-_]HK/i.test(v.lang)?10:/^zh/i.test(v.lang)?5:-99)+(/premium|高品質|頂級/i.test(v.name)?24:0)+(/enhanced|增強|加強|優化/i.test(v.name)?18:0)+(/natural|neural|online/i.test(v.name)?20:0)+(v.localService===false?2:0);
-  VOICE.v=vs.filter(v=>/^zh/i.test(v.lang)).sort((a,b)=>score(b)-score(a))[0]||null;
+  VOICE.v=vs.filter(v=>/zh[-_](TW|Hant)/i.test(v.lang)).sort((a,b)=>score(b)-score(a))[0]||null; VOICE.none=vs.length>0&&!VOICE.v;
   VOICE.hq=!!(VOICE.v&&/premium|enhanced|增強|加強|優化|高品質|頂級|natural|neural|online/i.test(VOICE.v.name)); }catch(e){} }
 if(window.speechSynthesis){ pickVoice(); try{ speechSynthesis.onvoiceschanged=pickVoice; }catch(e){} }
 // iOS drops an utterance queued right after cancel(), and garbage-collects ones nobody holds
@@ -689,12 +704,14 @@ function captainLines(){
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
-const VP={map:{},loading:{},clips:{}}, VOICE_VER=5;
+// tw: keys recorded with the Taiwan-accent model; the captain only ever speaks those
+const VP={map:{},loading:{},clips:{},tw:new Set()}, VOICE_VER=6;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
   const q=`?v=${VOICE_VER}`;
   return VP.loading[name]=Promise.all([fetch(`voice/${name}.json${q}`).then(r=>r.ok?r.json():null),fetch(`voice/${name}.mp3${q}`).then(r=>r.ok?r.arrayBuffer():null)]).then(([idx,ab])=>{ if(!idx||!ab) return;
+    (idx.__tw||[]).forEach(k=>VP.tw.add(k)); delete idx.__tw;
     for(const k in idx) VP.map[k]={ab,off:idx[k][0],len:idx[k][1],buf:null}; }).catch(()=>{});
 }
 function voicePacksForGame(){
@@ -714,13 +731,13 @@ function leaderShout(text,force,crowdEcho,rate){
   G.shout={txt:text.replace(/[　 ]+/g,' '),t:0};
   if(SAVE.settings&&SAVE.settings.voice===false) return;
   const now=performance.now(); if(!force&&now-MUS.lastShout<2400) return; MUS.lastShout=now;
-  const clip=SAVE.settings.aiVoice!==false&&VP.map[voiceKey(text)];
+  const vk=voiceKey(text), clip=SAVE.settings.aiVoice!==false&&VP.tw.has(vk)&&VP.map[vk];
   if(clip){ try{ speechSynthesis.cancel(); }catch(e){} playClip(clip); }
-  else if(window.speechSynthesis&&(VOICE.v||VOICE.none!==true)){
+  else if(window.speechSynthesis&&VOICE.v){
     try{ speakNow(text,rate||1.08); }catch(e){}
   }
   // the stands answer the call
-  if(force&&crowdEcho!==false){ const t=AU.ctx.currentTime+Math.min(3.5,.4+text.length*.2); for(let k=0;k<2;k++) INS.shout(t+k*.24,.22,'e'); }
+  if(force&&crowdEcho!==false){ const t=AU.ctx.currentTime+Math.min(3.5,.4+text.length*.2); if(!crowdFx('cheer',.5,t)) for(let k=0;k<2;k++) INS.shout(t+k*.24,.22,'e'); }
 }
 /* =========================================================
    The band: more instruments and a musical identity for every club.
@@ -845,9 +862,11 @@ function songFor(kind,p,T){
 // a clip on the beat: leader voices go dry and loud, the crowd through the stadium reverb
 function clipBuf(k){ const e=VP.map[k]; if(!e) return null; if(e.buf) return e.buf; if(!e.dec&&AU.ctx) e.dec=AU.ctx.decodeAudioData(e.ab.slice(e.off,e.off+e.len)).then(b=>{ e.buf=b; }).catch(()=>{}); return null; }
 function playAt(k,t,gain,lead,txt){
-  if(SAVE.settings.voice===false&&lead) return false; const b=clipBuf(k); if(!b) return false;
+  if(SAVE.settings.voice===false&&lead) return false;
+  if(lead&&!VP.tw.has(k)){ if(txt) setTimeout(()=>{ if(G&&!G.attract) G.shout={txt,t:0}; },Math.max(0,(t-AU.ctx.currentTime)*1000)); return false; }
+  const b=clipBuf(k); if(!b) return false;
   const c=AU.ctx, s=c.createBufferSource(), g=c.createGain(); s.buffer=b; g.gain.value=gain; s.connect(g); g.connect(AU.master);
-  if(!lead){ const r=c.createGain(); r.gain.value=.45; g.connect(r); r.connect(AU.revIn); }
+  if(!lead){ const r=c.createGain(); r.gain.value=.12; g.connect(r); r.connect(AU.revIn); }
   s.start(Math.max(t,c.currentTime));
   if(lead&&txt) setTimeout(()=>{ if(G&&!G.attract) G.shout={txt,t:0}; },Math.max(0,(t-c.currentTime)*1000));
   MUS.duck=Math.min(MUS.duck,.55); clearTimeout(MUS.duckT2); MUS.duckT2=setTimeout(()=>{ MUS.duck=1; },(t-c.currentTime+b.duration)*1000+80);
@@ -951,7 +970,7 @@ function playStep(s,i,t,v){
   if(n!=null){
     const L=s.len[bar*16+st]*d16*.95;
     leadPlay(s.style==='k'?'brass':s.lead,t,midiF(n),L,.085*v);
-    if(bar%4===3&&st===12) INS.shout(t,.16*v,'e');
+    if(bar%4===3&&st===12&&!playAt(cKey('嘿！'),t,.55*v)) INS.shout(t,.16*v,'e');
   }
 }
 // where the stands are in the current song: which line, how many syllables sung so far
@@ -3168,7 +3187,7 @@ function finishPA(o){
       startCut('react',1200,{f:pf,pose:'pump'},()=>{ startCut('kdance',2700,{side:'home',k:G.ks,pitcher:pn},nextPA); confetti(140); }); leaderShout(fillT(pick(SHOUT_T.k),{pn:(curPitcher().short||pn)}),true); });
     return;
   }
-  if(o.res==='K'&&userBatting()){ const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
+  if(o.res==='K'&&userBatting()){ sfx('ooh'); const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
     after(500,()=>startCut('react',1300,{f:G.batterFig,pose:mad?'helmet':'slump'},()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA))); return; }
   after(1600,nextPA);
 }
@@ -5038,7 +5057,7 @@ function renderSettings(){
   $('setFull').textContent=document.fullscreenElement||document.webkitFullscreenElement?'離開全螢幕':'進入全螢幕';
   $('setQuit').hidden=!G||G.attract||G.over;
 }
-function openSettings(){ audioInit(); pickVoice(); setTimeout(()=>{ if($('scrSet').hidden) return; if(VOICE.none&&!$('setNote').textContent) $('setNote').textContent='這台裝置沒有中文語音，團長的喊聲會改用字幕顯示。'; },60); if(G&&!G.attract) G.paused=true; try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} $('setNote').textContent=''; renderSettings(); $('scrSet').hidden=false; paginate($('setList'),true); }
+function openSettings(){ audioInit(); pickVoice(); setTimeout(()=>{ if($('scrSet').hidden) return; if(VOICE.none&&!$('setNote').textContent) $('setNote').textContent='這台裝置沒有台灣中文語音，還沒錄好的團長喊聲會改用字幕顯示。'; },60); if(G&&!G.attract) G.paused=true; try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} $('setNote').textContent=''; renderSettings(); $('scrSet').hidden=false; paginate($('setList'),true); }
 function closeSettings(){ $('scrSet').hidden=true; if(G) G.paused=false; }
 function toggleFull(){
   const d=document, el=d.documentElement, on=d.fullscreenElement||d.webkitFullscreenElement;
@@ -5357,7 +5376,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010145301', box=document.getElementById('upd');
+  const BUILD='20261010150541', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
