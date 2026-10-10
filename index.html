@@ -200,7 +200,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>畫質<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">自動：手機變慢或發熱時自動降低</small></span><button class="pill sel" id="setQual">自動</button></div>
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.9.1（2026.10.10）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.9.2（2026.10.10）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -222,7 +222,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.9.1（2026.10.10）</div>
+    <div class="ver">版本 2.9.2（2026.10.10）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -5231,13 +5231,13 @@ if(renderer) startAttract();
 show('scrTitle');
 requestAnimationFrame(frame);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!renderer) return; S3.vbKey=''; Object.keys(texCache).forEach(k=>delete texCache[k]); if(G&&G.attract) startAttract(); drawAds(null); });
-</script>
 // fast repeated taps must never zoom the page (iOS double-tap zoom left the screen black until a rotation)
 { let lastEnd=0;
   document.addEventListener('touchend',e=>{ const n=performance.now(); if(n-lastEnd<400&&!(e.target.closest&&e.target.closest('input,textarea,select'))) e.preventDefault(); lastEnd=n; },{passive:false});
   ['gesturestart','gesturechange','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
   // if the page got zoomed anyway, snap it back
   if(window.visualViewport) visualViewport.addEventListener('resize',()=>{ if(visualViewport.scale>1.01){ const m=document.querySelector('meta[name=viewport]'); if(m){ const c=m.content; m.content=c.replace(/,?maximum-scale=[\d.]+/,'')+',maximum-scale=1'; setTimeout(()=>{ m.content=c; resize(); },350); } else resize(); } }); }
+</script>
 <!-- Pass-phrase gate, only in the stand-alone site build (site/index.html) -->
 <div id="gate">
   <div class="gbox">
@@ -5296,7 +5296,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261010144358', box=document.getElementById('upd');
+  const BUILD='20261010144714', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
