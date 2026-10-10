@@ -79,6 +79,12 @@ html,body,#wrap,#stage{touch-action:manipulation}
 #wrap.land .cardsL .eyebrow{display:none}
 .setlist{display:grid;gap:calc(var(--u)*8)}
 #scrTitle.howOpen h1{display:none}
+.ovBtns{display:flex;flex-direction:column;gap:calc(var(--u)*10);flex:none}
+/* landscape result: score on the left, the night's numbers on the right, buttons in one row */
+#wrap.land #scrOver{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;column-gap:calc(var(--u)*22);row-gap:calc(var(--u)*8)}
+#wrap.land #scrOver .eyebrow{grid-column:1;grid-row:1} #wrap.land #scrOver h2{grid-column:1;grid-row:2;margin:0}
+#wrap.land #scrOver #ovScore{grid-column:1;grid-row:3;align-self:start} #wrap.land #scrOver .statbox{grid-column:2;grid-row:1/4;align-self:start}
+#wrap.land #scrOver .spacer{display:none} #wrap.land #scrOver .ovBtns{grid-column:1/3;grid-row:4;flex-direction:row} #wrap.land #scrOver .ovBtns .btn{flex:1}
 #howPanel:not([hidden]){display:flex;flex-direction:column}
 .btn{appearance:none;border:0;border-radius:calc(var(--u)*999);padding:calc(var(--u)*15) calc(var(--u)*22);font:900 calc(var(--fu)*21) var(--f-body);letter-spacing:.1em;background:var(--led);color:#1B1203;cursor:pointer;box-shadow:0 calc(var(--u)*6) 0 #A86A12}
 .btn:active{transform:translateY(calc(var(--u)*4));box-shadow:0 calc(var(--u)*2) 0 #A86A12}
@@ -151,6 +157,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
 .er .pill{padding:calc(var(--u)*7) calc(var(--u)*11);font-size:calc(var(--fu)*13);flex:none}
 #scrEdit{background:rgba(10,13,30,.96)}
 #stage.land .scr{left:50%;right:auto;width:min(100%,calc(var(--u)*540));transform:translateX(-50%)}
+#stage.land #scrOver{width:min(100%,calc(var(--u)*1020))}
 #stage.land #scrTitle{width:100%;transform:none;left:0;padding-left:calc(var(--u)*40);padding-right:calc(50% + var(--u)*10);background:linear-gradient(90deg,rgba(10,13,30,.94) 0,rgba(10,13,30,.7) 38%,rgba(10,13,30,0) 60%)}
 .gcard{position:absolute;left:50%;bottom:calc(var(--u)*90);width:calc(var(--u)*300);transform-origin:50% 100%;z-index:6;background:var(--panel);border-radius:calc(var(--u)*18);padding:calc(var(--u)*12);box-shadow:0 0 0 2px var(--rc,#FFD54A),0 calc(var(--u)*20) calc(var(--u)*60) rgba(0,0,0,.6);display:flex;flex-direction:column;gap:calc(var(--u)*6);transition:opacity .15s}
 .gcard .gph{width:100%;height:calc(var(--u)*250);object-fit:cover;object-position:50% 8%;border-radius:calc(var(--u)*12);background:linear-gradient(180deg,var(--tc,#333),#0A0D1E)}
@@ -226,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.20.7（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.21（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -248,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <button class="btn ghost" id="goCards">球員卡</button>
-    <div class="ver">版本 2.20.7（2026.10.11）</div>
+    <div class="ver">版本 2.21（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -315,9 +322,11 @@ html,body,#wrap,#stage{touch-action:manipulation}
       <div><div class="k">獲得金幣</div><div class="v" id="ovCoins" style="color:var(--gold)"></div></div>
     </div>
     <div class="spacer"></div>
-    <button class="btn" id="again">再戰一場</button>
-    <button class="btn ghost" id="ovCards">去抽球員卡</button>
-    <button class="btn ghost" id="toTitle">回標題</button>
+    <div class="ovBtns">
+      <button class="btn" id="again">再戰一場</button>
+      <button class="btn ghost" id="ovCards">去抽球員卡</button>
+      <button class="btn ghost" id="toTitle">回標題</button>
+    </div>
   </section>
 </div></div>
 
@@ -2974,7 +2983,7 @@ function batGeom(){
 }
 function cursorR(){ return batGeom().rb*2; }
 function timingWindow(){ return bal().tw*(G.batMode==='power'?.85:1); }
-const SWING_LEAD=40;
+const SWING_LEAD=45;  // ms from the start of the swing animation to the barrel crossing the plate (measured)
 function batLocal(g,x,y){ const dx=x-g.c.x, dy=y-g.c.y; return {s:dx*g.ux+dy*g.uy,v:(-dx*g.uy+dy*g.ux)*g.dirX}; }
 function batRadius(g,s){ return s>-.3*g.Lb?g.rb:lerp(g.rh,g.rb,clamp((s+.72*g.Lb)/(.42*g.Lb),0,1)); }
 function batContact(P){
@@ -3151,12 +3160,12 @@ function startPlay(EV,L,spray,p0,q){
     // runner from first tries for third on a single: the outfielder's arm decides
     const r1=G.runners[0];
     if(res==='1B'&&G.bases[0]&&r1&&!G.bases[2]&&rnd()<.3){
-      const tThrow=tp+0.9+pp.distanceTo(BASES[3])/THROW_SPD.of, tRun=0.15+54.86/runSpeed(r1);
+      const tThrow=tp+0.9+chase+pp.distanceTo(BASES[3])/THROW_SPD.of, tRun=0.15+54.86/runSpeed(r1);
       if(tThrow<tRun-0.45){ /* the runner reads the arm and holds at second */ }
       else { extra.toThird={out:tThrow<tRun-0.12}; tb=3; }
       if(extra.toThird&&extra.toThird.out) plan.hl={type:'throwout',title:'三壘阻殺！'};
     }
-    if(ev){ const c=coverFor(tb,[ev.k],spray); plan.covers.push({k:c,base:tb}); plan.throws.push(Object.assign({from:ev.k},throwTo(pp,tb,c,tp+0.9,THROW_SPD.of,extra.toThird?(extra.toThird.out?'OUT':'SAFE'):null))); }
+    if(ev){ const c=coverFor(tb,[ev.k],spray); plan.covers.push({k:c,base:tb}); plan.throws.push(Object.assign({from:ev.k},throwTo(pp,tb,c,tp+0.9+chase,THROW_SPD.of,extra.toThird?(extra.toThird.out?'OUT':'SAFE'):null))); }
     // a ball through the infield: the nearest infielder still dives for it
     if(!tr.hr&&(!ev||ev.k>=5)){ const md=missedDive(tr,k=>plan.covers.some(c=>c.k===k)); if(md) plan.miss=md; }
   }
@@ -3185,12 +3194,18 @@ function startPlay(EV,L,spray,p0,q){
   if(!plan.hl&&(res==='2B'||res==='3B')){ const bat=runners.find(rn=>rn.fig===G.batterFig); plan.hl={type:'xbh',title:res==='3B'?'三壘安打！':'二壘安打！',key:bat?Math.min(runEnd(bat),9):3,base:res==='3B'?3:2}; }
   if(!plan.hl) plan.throws.forEach(x=>{ if(plan.hl||!x.call) return; const rn=runners.find(q=>q.path.length>1&&q.path[q.path.length-1].distanceTo(BASES[x.base%4])<0.2); if(!rn) return;
     const ra=runEnd(rn), ta=x.at+x.dur; if(Math.abs(ra-ta)<0.35) plan.hl={type:'close',title:'驚險！',key:ta,base:x.base%4}; });
+  // what you see has to agree with the call: an OUT throw beats the runner to the bag, a SAFE one arrives after him
+  plan.throws.forEach(x=>{ if(!x.call) return; const rn=runners.find(q=>q.path.length>1&&q.path[q.path.length-1].distanceTo(BASES[x.base%4])<0.2); if(!rn) return;
+    let len=0; for(let i=1;i<rn.path.length;i++) len+=rn.path[i].distanceTo(rn.path[i-1]);
+    const ra=rn.start+len/rn.speed, ta=x.at+x.dur;
+    if(x.call==='OUT'&&ta>ra-0.08) rn.speed=len/Math.max(0.3,ta+0.12-rn.start);   // he is a step slow
+    if(x.call==='SAFE'&&ta<ra+0.06) x.at+=ra+0.1-ta; });                           // the throw is a step late
   let endT=res==='HR'?tr.wallT+3.0:ev?ev.t+(ev.air?1.5:0.9):4;
   plan.throws.forEach(x=>endT=Math.max(endT,x.at+x.dur+0.9));
   if(plan.hl&&(plan.hl.type==='dive'||plan.hl.type==='jump'||plan.hl.type==='rob')) endT+=0.5;
   runners.forEach(rn=>{ let len=0; for(let i=1;i<rn.path.length;i++) len+=rn.path[i].distanceTo(rn.path[i-1]); if(!rn.out) endT=Math.max(endT,Math.min(rn.start+len/rn.speed+0.3,9)); });
   G.phase='play';
-  G.play={tr,ev,res,r,oc,plan,t:0,endT,runners,ballPos:p0.clone(),p0:p0.clone(),batPos:G.batterFig.root.position.clone()};
+  G.play={tr,ev,res,r,oc,plan,t:0,endT,runners,ballPos:p0.clone(),p0:p0.clone(),batPos:G.batterFig.root.position.clone(),batYaw:G.batterFig.yaw};
   G.camMode='follow'; G.camT=0; G.camLook=p0.clone();
   if(G.batterFig.mode!=='swing') setMode(G.batterFig,'swing',0.02);
   G.batDrop={t:0}; G.flash=1; G.fielders[0].yaw=0;
@@ -3604,10 +3619,10 @@ function trajAt(tr,t){
 function handPos(f,throwing){ const v=new V3(); (throwing?(f.p.throws==='L'?f.lHand:f.rHand):(f.gloveHand||f.lHand)).getWorldPosition(v); return v; }
 function updatePlay(dt){
   const pl=G.play; pl.t+=dt/1000*1.15;
-  if(pl.replay&&pl.t<0){ pl.ballPos.copy(pl.p0).add(new V3(0,0.06*pl.t,pl.t*34)); if(pl.t>-0.05&&G.batterFig.mode!=='swing'){ setMode(G.batterFig,'swing',0); G.batterFig.mt=0; } return; }
+  if(pl.replay&&pl.t<0){ pl.ballPos.copy(pl.p0).add(new V3(0,0.06*pl.t,pl.t*34)); if(pl.t>-0.045&&G.batterFig.mode!=='swing'){ setMode(G.batterFig,'swing',0); G.batterFig.mt=0; } return; }
   if(pl.replay&&pl.pass!=null&&pl.pass<3&&pl.t>0.3){
     // rewind to just before contact for the next angle
-    pl.pass++; pl.t=-0.32; G.camT=0; const bf=G.batterFig; bf.root.position.copy(pl.batPos); setMode(bf,'load',0); bf.mt=0.55; bf.noSpring=true;
+    pl.pass++; pl.t=-0.32; G.camT=0; const bf=G.batterFig; bf.root.position.copy(pl.batPos); if(pl.batYaw!=null) bf.yaw=pl.batYaw; setMode(bf,'load',0); bf.mt=0.55; bf.noSpring=true;
     G.batDrop={t:0}; if(S3.bat.parent!==bf.root) bf.root.add(S3.bat); G.batFlip=null; G.trailInit=false;
   }
   const t=pl.t, ev=pl.ev, F=G.fielders, th=pl.plan.throws;
@@ -3680,7 +3695,7 @@ function startReplay(pl,done){
   rp.plan=Object.assign({},pl.plan,{throws:pl.plan.throws.map(x=>Object.assign({},x,{from3:null,caught:false}))});
   G.fielders.forEach((f,i)=>{ f.root.position.copy(f.home); f.mode='stand'; f.from=null; f.spr=null; });
   rp.runners.forEach(r=>{ r.fig.root.position.copy(r.path[0]); r.fig.mode='lead'; r.fig.from=null; r.fig.root.visible=true; });
-  const bf=G.batterFig; bf.root.visible=true; bf.root.position.copy(pl.batPos); setMode(bf,'load',0); bf.mt=0.55; bf.noSpring=true;
+  const bf=G.batterFig; bf.root.visible=true; bf.root.position.copy(pl.batPos); if(pl.batYaw!=null) bf.yaw=pl.batYaw; setMode(bf,'load',0); bf.mt=0.55; bf.noSpring=true;
   G.batDrop={t:0}; G.batFlip=pl.res==='HR'?{t:0}:null;
   // trim to the moment that matters
   const hl=pl.plan.hl||{}, ev=pl.ev, lastT=pl.plan.throws.length?pl.plan.throws[pl.plan.throws.length-1]:null;
@@ -3861,7 +3876,7 @@ function updateFigures(dt){
     else if(bf.mode==='run'){ bf.runPh=(bf.runPh||0)+dt*14; p=runPose(bf.runPh); }
     else if(bf.mode==='slide') p=bf.slideHead?DIVE:SLIDE_F;
     else if(bf.mode==='lead') p=RLEAD;
-    else if(bf.mode==='swing'){ p=sampleKeys(S.swing,bf.mt); if(bf.mt>1.1&&!G.play) setMode(bf,'stance',0.5); }
+    else if(bf.mode==='swing'){ if(G.play&&G.play.replay) bf.mt=Math.max(0,G.play.t+0.045); p=swingToBall(bf,S,sampleKeys(S.swing,bf.mt)); if(bf.mt>1.1&&!G.play) setMode(bf,'stance',0.5); }
     else if(bf.mode==='load'){ p=bf.mt<0.3?S.load:lp(S.load,S.stride,ease((bf.mt-0.3)/0.22)); if(G.pitch&&G.pitch.done&&!G.play&&bf.mt>0.2) setMode(bf,'stance',0.5); }
     else if(G.phase==='cut'&&G.cut&&G.cut.type==='intro'&&G.cut.data.f===bf){ if(!bf.ritK) bf.ritK=ritualKeys(bf.p.ritual,BASE_STANCE,bf.p.bat==='L'); const u=G.cut.t/G.cut.dur; p=u<.75?sampleKeys(bf.ritK,u):lp(bf.ritK[bf.ritK.length-1][1],S.stance,ease((u-.75)/.22)); bf.noSpring=false; }
     else { const w=Math.sin(G.clock/380)*0.05; p=Object.assign({},S.stance); p.hy=S.stance.hy+Math.sin(G.clock/600)*0.01; p.lh=[S.stance.lh[0]+w*0.2,S.stance.lh[1],S.stance.lh[2]]; p.rh=[S.stance.rh[0]+w,S.stance.rh[1],S.stance.rh[2]+w*0.5]; }
@@ -3957,6 +3972,19 @@ function fielderInPlay(f,i,pl,dt){
     return;
   }
   drive(f,FREADY,dt);
+}
+// bend the stock swing so the barrel meets the pitch where it actually is (height, in/out, depth):
+// the sweet spot at the contact frame is solved once per swing and the hands carry the correction around contact
+function swingToBall(bf,S,p){
+  const tgt=(G.play&&G.play.p0)||(G.pitch&&G.pitch.end3); if(!tgt) return p;
+  const key=tgt.x.toFixed(3)+tgt.y.toFixed(3)+bf.yaw.toFixed(2)+bf.root.position.x.toFixed(2);
+  if(bf.swKey!==key){ bf.swKey=key; const cp=sampleKeys(S.swing,0.045), left=bf.p.bat==='L', g=left?cp.rh:cp.lh, t=left?cp.lh:cp.rh;
+    const d=new V3(t[0]-g[0],t[1]-g[1],t[2]-g[2]).normalize(), sweet=new V3(g[0],g[1],g[2]).addScaledVector(d,0.68);
+    bf.root.updateMatrixWorld(true); const tl=bf.root.worldToLocal(tgt.clone());
+    bf.swCorr=new V3(clamp(tl.x-sweet.x,-0.65,0.65),clamp(tl.y-sweet.y,-0.5,0.5),clamp(tl.z-sweet.z,-0.65,0.65)); }
+  const c=bf.swCorr, w=Math.exp(-Math.pow((bf.mt-0.045)/0.04,2)); if(!c||w<0.01) return p;
+  const q=Object.assign({},p), add=(v,k)=>v?[v[0]+c.x*w*k,v[1]+c.y*w*k,v[2]+c.z*w*k]:v;
+  q.lh=add(p.lh,1); q.rh=add(p.rh,1); q.le=add(p.le,0.6); q.re=add(p.re,0.6); return q;
 }
 function updateCatcher(dt){
   const c=G.catcher; if(!c) return;
@@ -5490,10 +5518,14 @@ $('setSound').onclick=()=>{ SAVE.settings.sound=!SAVE.settings.sound; AU.on=SAVE
 $('setVoiceTest').onclick=()=>{ audioInit(); pickVoice(); try{ speakNow('大家好，我是應援團長！全場一起加油！',1.05); $('setNote').textContent=(VOICE.v?`使用語音：${VOICE.v.name}`:'正在用系統預設的中文語音。')+(VOICE.hq?'':'　想要更自然的聲音：iPhone「設定 → 輔助使用 → 朗讀內容 → 聲音 → 中文（台灣）」下載「增強」或「高品質」版本，下載後重新打開遊戲。')+'　沒聲音請關閉側邊的靜音開關。'; }catch(e){ $('setNote').textContent='這個瀏覽器不支援語音。'; } };
 $('setVoice').onclick=()=>{ SAVE.settings.voice=!SAVE.settings.voice; if(!SAVE.settings.voice) try{ speechSynthesis.cancel(); }catch(e){} persist(); renderSettings(); };
 $('setAiVoice').onclick=()=>{ SAVE.settings.aiVoice=SAVE.settings.aiVoice===false; persist(); renderSettings(); };
-// backup: a JSON file handed to the share sheet (Files → iCloud Drive / Google Drive), restored from the file picker
+// backup: a JSON file handed to the share sheet (Files → iCloud Drive / Google Drive), restored from the file picker.
+// Inside the claude.ai viewer a page cannot download directly: the viewer's own save prompt does it (downloads capability).
+let DL=null; try{ if(window.claude&&window.claude.use) window.claude.use('downloads').then(d=>{ DL=d; }).catch(()=>{}); }catch(e){}
 $('setExport').onclick=async()=>{
   const d=new Date(), name=`fever-baseball-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
   const blob=new Blob([JSON.stringify({app:'fever-baseball',v:1,at:d.toISOString(),save:SAVE})],{type:'application/json'}), file=new File([blob],name,{type:'application/json'});
+  if(DL){ try{ await DL.save({filename:name,data:blob}); $('setNote').textContent=`已存下 ${name}，可以放到雲端硬碟保存。`; }
+    catch(e){ $('setNote').textContent=e&&e.code==='declined'?'已取消存檔。':e&&e.code==='rate_limited'?'存檔視窗已經開著，請先處理那個視窗。':'這裡無法下載存檔，請改用 GitHub 版的遊戲匯出。'; } return; }
   try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'熱血應援棒球 存檔'}); $('setNote').textContent='已開啟分享選單：選「儲存到檔案」，再挑 iCloud Drive 或 Google Drive。'; return; } }catch(e){ if(e&&e.name==='AbortError') return; }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
   $('setNote').textContent=`已下載 ${name}，可以放到雲端硬碟保存。`;
@@ -5789,7 +5821,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011005042', box=document.getElementById('upd');
+  const BUILD='20261011013338', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
