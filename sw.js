@@ -1,5 +1,5 @@
 // Offline cache for the stand-alone site: pages network-first, CDN scripts and fonts cache-first
-const CACHE='fever-20261011121447';
+const CACHE='fever-20261011124745';
 const CORE=['./','./index.html','./apple-touch-icon.png','./icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{})); });
 self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k.startsWith('fever-')).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
