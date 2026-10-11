@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.32（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.33（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.32（2026.10.11）</div>
+    <div class="ver">版本 2.33（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -692,18 +692,20 @@ function pickChant(list){ MUS.recent=MUS.recent||[]; const fresh=list.filter(s=>
 // the way a CPBL captain keeps the stands loud
 const OFF_T={
   base:['{n}～全～壘～打！','安打！安打！{n}！','{n}！一棒打出去！','強棒出擊！{n}！','{n}加油！{n}加油！','攻擊！攻擊！{tn}！','打出去！打出去！','{tn}！衝啊！','嘿！嘿！{n}！','一直安打，一直打！一直安打，一直打！','{tn}！尚勇！',
-    '我說{tn}！你們說衝！{tn}！衝！{tn}！衝！','準備好了沒？大聲一點！聽不到！','左邊的！右邊的！一起喊{n}！','一棒！定江山！{n}！','讚啦！{n}！打給他看！','揮大棒！喝珍奶！{n}打出去！','來喔來喔！{n}要開轟囉！'],
-  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！','炸裂！炸裂！全壘打！','轟吧！一棒轟出牆！','外野手往後退！往後退！','這球很大喔！很大喔！','送它去外太空！'],
+    '我說{tn}！你們說衝！{tn}！衝！{tn}！衝！','準備好了沒？大聲一點！聽不到！','左邊的！右邊的！一起喊{n}！','一棒！定江山！{n}！','讚啦！{n}！打給他看！','揮大棒！喝珍奶！{n}打出去！','來喔來喔！{n}要開轟囉！','{N}！{N}！今晚看你的！','我喊{N}，你們喊加油！{N}！加油！'],
+  pow:['{n}～大～砲～！','炸裂吧！{n}！','飛出去！飛出去！','炸裂！炸裂！全壘打！','轟吧！一棒轟出牆！','外野手往後退！往後退！','這球很大喔！很大喔！','送它去外太空！','{N}！開轟！開轟！'],
   steal:['盜！盜！盜！衝啊！','跑跑跑！他抓不到！'], spd:['{n}！跑起來！','閃電出擊！{n}！','腳程快！別想抓！'],
   risp:['得分！得分！{n}！','帶他們回家！帶他們回家！','一支安打就好！','打點！打點！{n}！','壘上有人！機會來啦！','回來回來！通通回來！'],
   loaded:['滿壘！清壘！清壘！','滿貫全壘打！','滿壘大餐！一口吃掉！'],
   two:['顧好！顧好！選好球！','穩住！穩住！看清楚！','兩好球不要怕！擋下來！'], three:['看清楚！保送也好！','滿球數！決勝負！'],
   behind:['逆轉！逆轉！{tn}逆轉！','還沒結束！追上去！','落後沒在怕！逆轉給你看！'], twoOut:['兩出局！不放棄！','最後一口氣！衝啊！','兩出局才精彩！']};
 const DEF_T={
-  base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！','{pn}！穩穩投！','投手丘是你的！'],
-  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','麻糬麻糬，三振出局！','三振！三振！','一顆就好！一顆好球！','最後一顆！給他吃K！','三振給我看！三振給我看！'], one:['再一個好球！','揮棒落空！揮棒落空！','快了快了！再一顆！'],
+  base:['{pn}加油！{pn}加油！','好球！好球！','穩住！穩住！','守下來！守下來！','{tn}！守備加油！','投好球！投好球！','{pn}！穩穩投！','投手丘是你的！','{pn}大帝！投好球！','壓制他！壓制他！'],
+  two:['再來一個好球！','三、振、他！','便當便當，揮棒落空！','麻糬麻糬，三振出局！','三振！三振！','一顆就好！一顆好球！','最後一顆！給他吃K！','三振給我看！三振給我看！','三～振～他～！','好球～三振他！三振他！三振他！','K！K！K！K！'], one:['再一個好球！','揮棒落空！揮棒落空！','快了快了！再一顆！','再來一個好球！再來一個好球！','好球！好球！好球！'],
   dp:['雙殺！雙殺！','滾地球！雙殺！','水果滷味，雙殺！雙殺！','雙殺快餐！外帶一份！'], risp:['守住！守住！','一個出局數！一個就好！','不要讓他回來！'],
-  twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！','收工收工！準備回家！'], clean:['三上三下！三上三下！','三上三下！早點下班！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！','關門大吉！']};
+  twoOut:['最後一個出局數！','抓下來！抓下來！','兩出局！收掉他！','收工收工！準備回家！'], clean:['三上三下！三上三下！','三上三下！早點下班！'], three:['不要怕！塞進去！'], closer:['守護神！{pn}！','關門！關門！','關門大吉！','比賽結束！關門！'],
+  // the captain's quick answer to each called or swinging strike while we pitch
+  strike:['好球！','齁～係啦！','漂亮！好球！','再來一個好球！'], strike2:['三～振～他～！','好球～三振他！','最後一顆！','三振！三振！'], kdone:['下一位！下一位！','回家吃便當！','三振出局！讚啦！']};
 const SHOUT_T={hr:'全壘打！全壘打！{n}！再見啦小白球！',hit:'安打！{n}！漂亮！',score:'得分！{tn}得分！讚啦！',trot:'{n}！繞場一周！享受掌聲！',come:'逆轉！逆轉！{tn}逆轉勝！',ahead:'超前！超前！{tn}來了！',
   closerIn:'守護神登場！{pn}！',lucky:'幸運七局！全場起立！我喊{tn}，你們喊加油！',luckyGood:'太讚了！全場沸騰！',luckyOk:'不錯喔！再大聲一點！',greet:'{tn}的朋友們！準備好了沒！比賽開始！',
   k:['三振！三振！三振！','{pn}！三振王！','揮棒落空！回去吃便當！','三振！漂亮！','吃K啦！三振！','{pn}！K！K！K！'],field:['雙殺守備！','三壘阻殺！','沒收全壘打！','美技飛撲！','跳接美技！','飛撲攔截！'].map(t=>'好球！'+t)};
@@ -718,9 +720,9 @@ function girlSay(kind,delay){
     const go=buf=>{ clip.buf=buf; const s=c.createBufferSource(), g=c.createGain(); s.buffer=buf; g.gain.value=1.3; s.connect(g).connect(AU.master); s.start(); };
     if(clip.buf) go(clip.buf); else c.decodeAudioData(clip.ab.slice(clip.off,clip.off+clip.len)).then(go).catch(()=>{}); });
 }
-function fillT(s,v){ return s.replace(/\{(n|pn|tn)\}/g,(m,k)=>v[k]||''); }
+function fillT(s,v){ return s.replace(/\{(n|N|pn|tn)\}/g,(m,k)=>v[k]||v.n||''); }
 function offenseChant(){
-  const b=curBatter(), v={n:b.short||b.name,tn:batTeam().name}, behind=G.score.home<G.score.away, L=OFF_T.base.slice();
+  const b=curBatter(), v={n:b.short||b.name,N:b.nick||b.short,tn:batTeam().name}, behind=G.score.home<G.score.away, L=OFF_T.base.slice();
   if(b.pow>.75) L.push(...OFF_T.pow); if(b.spd>.8) L.push(...OFF_T.spd);
   if(G.bases[1]||G.bases[2]) L.push(...OFF_T.risp); if(G.bases[0]&&G.bases[1]&&G.bases[2]) L.push(...OFF_T.loaded);
   if(G.bases[0]&&!G.bases[1]&&G.outs<2) L.push(...OFF_T.steal);
@@ -741,11 +743,11 @@ function captainLines(){
   const packs={common:new Set()}, add=(k,t)=>{ (packs[k]=packs[k]||new Set()).add(t); };
   const all=[...Object.values(OFF_T).flat(),...Object.values(DEF_T).flat(),...Object.values(SHOUT_T).flat()];
   all.filter(t=>!/\{/.test(t)).forEach(t=>add('common',t));
-  TEAMS.forEach(T=>all.filter(t=>/\{tn\}/.test(t)&&!/\{n\}|\{pn\}/.test(t)).forEach(t=>add('t-'+T.id,fillT(t,{tn:T.name}))));
+  TEAMS.forEach(T=>all.filter(t=>/\{tn\}/.test(t)&&!/\{n\}|\{N\}|\{pn\}/.test(t)).forEach(t=>add('t-'+T.id,fillT(t,{tn:T.name}))));
   TEAMS.forEach(T=>chanceLyrics({short:'',nick:''},T).filter(l=>!/^機會|！　帶他們/.test(l)).forEach(l=>add('t-'+T.id,l)));
   ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id;
     if(p.role){ all.filter(t=>/\{pn\}/.test(t)).forEach(t=>add(k,fillT(t,{pn:p.short||p.name}))); return; }
-    all.filter(t=>/\{n\}/.test(t)).forEach(t=>add(k,fillT(t,{n:p.short||p.name})));
+    all.filter(t=>/\{n\}|\{N\}/.test(t)).forEach(t=>add(k,fillT(t,{n:p.short||p.name,N:p.nick||p.short})));
     (p.lyrics||[p.chant]).filter(Boolean).forEach(l=>add(k,l));
     chanceLyrics(p,TEAMS[p.homeTeam]).forEach(l=>add(k,l)); });
   // call-and-response: the captain's call and the stands' answer (C| = crowd)
@@ -1137,18 +1139,42 @@ const CHANT_T=[
 ];
 const STAR_CHANT=(p,T)=>`${p.nick}！${p.nick}！　${p.name}　轟出去！`;
 function typeKey(p){ return p.pow>=.82?'power':p.spd>=.82?'speed':p.con>=.8?'contact':'all'; }
+// Every batter gets a stand nickname (stars keep their own): built from his game and his given name, the way
+// CPBL fans crown a "大王" or "大帝" or name a slugger after his bat
+const NICKS={
+  power:s=>[`${s}大砲`,`${s}大帝`,`重砲${s}`,`轟炸機${s}`,`全壘打${s}`],
+  speed:s=>[`閃電${s}`,`風速${s}`,`${s}快腿`,`飛毛腿${s}`],
+  contact:s=>[`安打王子${s}`,`神準${s}`,`${s}安打機`,`穩穩${s}`,`${s}職人`,`推進大師${s}`],
+  all:s=>[`${s}大王`,`全能${s}`,`${s}隊長`,`熱血${s}`,`拚命三郎${s}`,`${s}大將`,`鐵人${s}`],
+};
+const POS_NICK={'捕手':'鐵壁捕手','游擊手':'游擊魔術師','中外野手':'中外野守護神','二壘手':'二壘小鋼砲','三壘手':'熱角大將'};
+function autoNick(p,T){ const k=typeKey(p), h=hashStr(p.name), used=T&&(T._nicks||(T._nicks=new Set()));
+  const L=(POS_NICK[p.pos]&&h%5===0?[POS_NICK[p.pos]]:[]).concat(NICKS[k](p.short));
+  // no two teammates share a nickname or the same "全能…" pattern
+  for(let i=0;i<L.length;i++){ const n=L[(h+i)%L.length], stem=n.replace(p.short,''); if(!used||!used.has(stem)){ used&&used.add(stem); return n; } }
+  return L[h%L.length]; }
+// Song lyrics: name, nickname, number, position, which side he bats from and what kind of hitter he is,
+// four verses per type, picked per player so teammates don't all sing the same song
 const LYRICS={
-  power:[(n,N,s,T)=>[`${N}！${N}！　一棒轟出去！`,`${n}　力量全開　看台等你接！`,`嘿！嘿！　全壘打！`,`${s}！${s}！　炸裂吧！`],
-         (n,N,s,T)=>[`轟！轟！　${N}來了！`,`外野看台　準備好！`,`${n}　一棒　打上天！`,`${T.name}的大砲　${s}！`]],
-  speed:[(n,N,s,T)=>[`${s}　飛奔　快如閃電！`,`一壘　二壘　誰也追不上！`,`衝！衝！　${N}！`,`安打　盜壘　${n}！`],
-         (n,N,s,T)=>[`跑起來！跑起來！　${s}！`,`風一樣的　${N}！`,`穿越內野　一路回家！`,`${n}！　速度之王！`]],
-  contact:[(n,N,s,T)=>[`${s}！${s}！　安打製造機！`,`穿越　穿越　打到空檔！`,`一棒一棒　${n}！`,`${T.name}的　${N}！`],
-           (n,N,s,T)=>[`看準了！　${s}！`,`好球　好球　打出去！`,`${n}　安打　不會停！`,`喔～喔～　${N}！`]],
-  all:[(n,N,s,T)=>[`${n}！　${T.name}的心臟！`,`攻守全能　${s}最強！`,`喔～喔～　${s}！`,`帶我們　一起贏球！`],
-       (n,N,s,T)=>[`${s}！${s}！　加油！`,`今晚　就是你的舞台！`,`一棒　打出${T.name}魂！`,`${n}！　衝啊！`]],
+  power:[(n,N,s,T,p)=>[`${N}！${N}！　一棒轟出去！`,`${n}　力量全開　看台等你接！`,`嘿！嘿！　全壘打！`,`${s}！${s}！　炸裂吧！`],
+         (n,N,s,T,p)=>[`轟！轟！　${N}來了！`,`外野看台　準備好！`,`${n}　一棒　打上天！`,`${T.name}的大砲　${s}！`],
+         (n,N,s,T,p)=>[`${p.num}號　${N}！`,`${p.pos}的重砲　開轟啦！`,`飛過全壘打牆　送到外太空！`,`${s}！${s}！　再見啦！`],
+         (n,N,s,T,p)=>[`${p.bat==='L'?'左打':'右打'}重砲　${n}！`,`一棒定江山　${N}！`,`喔～喔～　轟出去！`,`${T.name}　全壘打！`]],
+  speed:[(n,N,s,T,p)=>[`${s}　飛奔　快如閃電！`,`一壘　二壘　誰也追不上！`,`衝！衝！　${N}！`,`安打　盜壘　${n}！`],
+         (n,N,s,T,p)=>[`跑起來！跑起來！　${s}！`,`風一樣的　${N}！`,`穿越內野　一路回家！`,`${n}！　速度之王！`],
+         (n,N,s,T,p)=>[`${p.num}號　${N}！`,`一碰到球　就是安打！`,`盜！盜！盜！　${s}衝啊！`,`${T.name}的　飛毛腿！`],
+         (n,N,s,T,p)=>[`${p.bat==='L'?'左打':'右打'}閃電　${n}！`,`內野滾地　也是安打！`,`跑！跑！跑！　${N}！`,`一路衝回本壘！`]],
+  contact:[(n,N,s,T,p)=>[`${s}！${s}！　安打製造機！`,`穿越　穿越　打到空檔！`,`一棒一棒　${n}！`,`${T.name}的　${N}！`],
+           (n,N,s,T,p)=>[`看準了！　${s}！`,`好球　好球　打出去！`,`${n}　安打　不會停！`,`喔～喔～　${N}！`],
+           (n,N,s,T,p)=>[`${p.num}號　${N}！`,`左邊右邊　都是安打！`,`一支一支　打不停！`,`${s}！${s}！　再一支！`],
+           (n,N,s,T,p)=>[`${p.pos}　${n}！`,`穩穩出棒　${N}！`,`推進！推進！　打到空檔！`,`${T.name}　安打！安打！`]],
+  all:[(n,N,s,T,p)=>[`${n}！　${T.name}的心臟！`,`攻守全能　${s}最強！`,`喔～喔～　${s}！`,`帶我們　一起贏球！`],
+       (n,N,s,T,p)=>[`${s}！${s}！　加油！`,`今晚　就是你的舞台！`,`一棒　打出${T.name}魂！`,`${n}！　衝啊！`],
+       (n,N,s,T,p)=>[`${p.num}號　${N}！`,`守備美技　打擊也行！`,`全場一起喊　${s}！`,`${T.name}　衝衝衝！`],
+       (n,N,s,T,p)=>[`${p.pos}的　${N}！`,`有你在　就安心！`,`喔～喔～　${n}！`,`打出去！　${T.name}贏！`]],
 };
 const SONG_FEEL={power:{bpm:122,minor:true,style:'brass',pat:[1,0,0,1,1,0,1,0]},speed:{bpm:154,minor:false,style:'edm',pat:[1,1,0,1,1,1,0,1]},contact:{bpm:138,minor:false,style:'brass',pat:[1,0,1,0,1,1,1,0]},all:{bpm:132,minor:false,style:'brass',pat:[1,0,1,1,0,1,1,0]}};
-function lyricsFor(p,T){ const k=typeKey(p), v=LYRICS[k][(p.num||0)%2]; return v(p.name,p.nick||p.short,p.short,T); }
+function lyricsFor(p,T){ if(!p.nick) p.nick=autoNick(p,T); const k=typeKey(p), L=LYRICS[k], v=L[hashStr(p.name+p.num)%L.length]; return v(p.name,p.nick,p.short,T,p); }
 function chanceLyrics(p,T){ const N=p.nick||p.short; return [`機會來了！　${N}！`,`得點圈　有人在等你！`,`${T.name}得分！　${T.name}得分！`,`${p.short}！　帶他們回家！`]; }
 // Cheer move pools per squad style; the last two counts of a star's routine are his signature move
 const MOVE_POOL={
@@ -3419,6 +3445,8 @@ function countEvent(k){
   else if(k==='swingMiss'){ G.strikes++; t='揮棒落空'; c='#FFD21F'; }
   else if(k==='foul'){ if(G.strikes<2) G.strikes++; t='界外球'; c='#FFB23F'; }
   if(!userBatting()&&k!=='ball') addGauge(5);
+  // while we pitch, the captain answers each strike (the stands' strike calls), louder at two strikes
+  if(!userBatting()&&k!=='ball'&&G.strikes<3&&!G.attract) leaderShout(pick(G.strikes>=2?DEF_T.strike2:DEF_T.strike),false,true,1.15);
   if(G.balls>=4) return finishPA(resolveOutcome({res:'BB'}));
   if(G.strikes>=3){ G.kLook=k==='strike'; return finishPA(resolveOutcome({res:'K',look:k==='strike'})); }
   popup(t,{size:34,dur:750,color:c,y:300});
@@ -6163,7 +6191,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011025949', box=document.getElementById('upd');
+  const BUILD='20261011115753', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
