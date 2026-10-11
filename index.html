@@ -233,7 +233,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="setrow"><span>快速模式<small style="display:block;color:var(--mute);font-size:calc(var(--fu)*11)">縮短特寫與慶祝、只重播全壘打</small></span><button class="pill" id="setFast">關</button></div>
     <div class="setrow"><span>全螢幕</span><button class="pill" id="setFull">進入全螢幕</button></div>
     </div>
-    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.33（2026.10.11）</div>
+    <div class="ver" style="text-align:left">熱血應援棒球　版本 2.34（2026.10.11）</div>
     <p class="lede" id="setNote" style="font-size:calc(var(--fu)*13);color:var(--mute)"></p>
     <div class="spacer"></div>
     <button class="btn" id="setClose">繼續</button>
@@ -255,7 +255,7 @@ html,body,#wrap,#stage{touch-action:manipulation}
     <div class="row" style="justify-content:space-between"><span><span class="lbl">金幣</span> <span class="coins" id="tCoins">0</span></span><span class="row" style="gap:calc(var(--u)*8)"><button class="pill" id="missBtn">📋 任務<span id="missDot" class="dot" hidden></span></button><button class="pill" id="installBtn">📲 加入主畫面</button><button class="pill" id="howBtn">玩法說明</button></span></div>
     <button class="btn" id="goTeam">開始比賽</button>
     <div class="row" style="gap:calc(var(--u)*10)"><button class="btn ghost" id="goPractice" style="flex:1">⚾ 打擊練習</button><button class="btn ghost" id="goCards" style="flex:1">球員卡</button></div>
-    <div class="ver">版本 2.33（2026.10.11）</div>
+    <div class="ver">版本 2.34（2026.10.11）</div>
   </section>
 
   <section class="scr" id="scrTeam" hidden>
@@ -481,6 +481,8 @@ function sfx(n){
   if(n==='roar'&&!crowdFx('roar',1.1)) crowd(2.8,.55);
   if(n==='cheer'&&!crowdFx('cheer',.8)) crowd(1.3,.3);
   if(n==='ooh') crowdFx('ooh',.9);
+  // the home stand's reactions: rising with a long fly, a groan for an out, a gasp at a bang-bang play
+  if(n==='swell') crowdFx('swell',.85); if(n==='groan') crowdFx('groan',1.0); if(n==='gasp') crowdFx('gasp',.9);
   if(n==='clap'){ noise(t,.07,.8,1500,'bandpass'); }
   if(n==='skill'){ for(let i=0;i<8;i++) drum(t+i*.06,140+i*12,.5); tone(t+.5,660,.4,.2,'square'); tone(t+.62,990,.5,.2,'square'); }
   if(n==='horn'){ tone(t,392,.35,.18,'sawtooth'); tone(t+.36,523,.6,.18,'sawtooth'); }
@@ -752,15 +754,16 @@ function captainLines(){
     chanceLyrics(p,TEAMS[p.homeTeam]).forEach(l=>add(k,l)); });
   // call-and-response: the captain's call and the stands' answer (C| = crowd)
   ['全壘打！','安打！','得分！','三振！','加油！','好球！','勝利！'].forEach(t=>add('common',t));
-  ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！','勝利！'].forEach(t=>add('common','C|'+t));
+  ['全壘打！','安打！','加油！','嘿！','三振！','好球！','得分！','勝利！','衝！','開轟！','穩住！','守下來！','雙殺！','逆轉！'].forEach(t=>add('common','C|'+t));
   TEAMS.forEach(T=>{ add('t-'+T.id,'C|'+T.name+'！'); add('t-'+T.id,T.name+'！'); });
-  Object.values(GIRL_T).flat().forEach(t=>add('common','G|'+t));
+  Object.values(GIRL_T).flat().forEach(t=>add('common','G|'+t)); Object.values(PRAC_LINES).flat().forEach(t=>add('common','G|'+t));
+  ALL_PLAYERS.forEach(p=>{ if(!p.role&&!p.girl) add('p-'+p.id,'G|'+(p.short||p.name)+'好帥～！'); });
   ALL_PLAYERS.forEach(p=>{ const k='p-'+p.id, n=p.short||p.name; if(p.role) add(k,n+'加油！'); else { add(k,n+'！'); add(k,'C|'+n+'！'); } });
   const out={}; for(const k in packs) out[k]=[...packs[k]]; return out;
 }
 /* ---------- recorded captain voice: packs of pre-generated clips, system speech as the fallback ---------- */
 // tw: keys recorded with the Taiwan-accent model; the captain only ever speaks those
-const VP={map:{},loading:{},clips:{},tw:new Set()}, VOICE_VER=9;
+const VP={map:{},loading:{},clips:{},tw:new Set()}, VOICE_VER=10;
 const voiceKey=t=>t.replace(/[\s　，,、。．！!？?～~]/g,'');
 function loadVoicePack(name){
   if(VP.loading[name]) return VP.loading[name];
@@ -792,7 +795,12 @@ function leaderShout(text,force,crowdEcho,rate){
     try{ speakNow(text,rate||1.08); }catch(e){}
   }
   // the stands answer the call
-  if(force&&crowdEcho!==false){ const t=AU.ctx.currentTime+Math.min(3.5,.4+text.length*.2); if(!crowdFx('cheer',.5,t)) for(let k=0;k<2;k++) INS.shout(t+k*.24,.22,'e'); }
+  if(force&&crowdEcho!==false){ const t=AU.ctx.currentTime+Math.min(3.5,.4+text.length*.2), m=text.match(/你們(?:說|喊)([^，！,!]+)/);
+    if(m&&playAt(cKey(m[1]+'！'),t,1.0)){ playAt(cKey(m[1]+'！'),t+0.75,1.1); return; }
+    // a chant that ends on a repeated word ("三振！三振！") gets that word back from the stands
+    const w=text.split(/[！!]/).filter(Boolean), last=w.length>1&&w[w.length-1]===w[w.length-2]?w[w.length-1]:null;
+    if(last&&playAt(cKey(last+'！'),t,1.0)) return;
+    if(!crowdFx('cheer',.5,t)) for(let k=0;k<2;k++) INS.shout(t+k*.24,.22,'e'); }
 }
 /* =========================================================
    The band: more instruments and a musical identity for every club.
@@ -2317,9 +2325,18 @@ function makePlayer(p,T,kitSide,opt){
 //  battle: a fitted sequined top covering the chest to the collarbone, one asymmetric strap, a belt
 let CHEER_OUTFIT='jersey';
 function cheerTorsoTex(T,Q,style,outfit){
-  const key=`ct3|${T.id}|${outfit}`; if(texCache[key]) return texCache[key];
+  const key=`ct3|${T.id}|${outfit}|${outfit==='casual'?Q.top:''}`; if(texCache[key]) return texCache[key];
   const c=document.createElement('canvas'); c.width=512; c.height=256; const g=c.getContext('2d'), SK='#E9B596';
   g.fillStyle=SK; g.fillRect(0,0,512,256);
+  if(outfit==='casual'){
+    g.fillStyle=Q.top; g.fillRect(0,0,512,232);
+    const r=seeded(hashStr(Q.top)); g.fillStyle=Q.trim; for(let i=0;i<140;i++){ const x=r()*512, y=r()*220+6; g.globalAlpha=.55; for(let k=0;k<5;k++){ g.beginPath(); g.arc(x+Math.cos(k*1.257)*3,y+Math.sin(k*1.257)*3,2.2,0,Math.PI*2); g.fill(); } } g.globalAlpha=1;
+    // round collar and a ribbon at the chest
+    g.fillStyle='#FFFFFF'; g.beginPath(); g.ellipse(128,0,52,22,0,0,Math.PI); g.fill(); g.fillStyle=SK; g.beginPath(); g.ellipse(128,0,30,13,0,0,Math.PI); g.fill();
+    g.fillStyle=Q.trim; g.beginPath(); g.moveTo(128,34); g.lineTo(108,24); g.lineTo(108,46); g.closePath(); g.fill(); g.beginPath(); g.moveTo(128,34); g.lineTo(148,24); g.lineTo(148,46); g.closePath(); g.fill(); g.beginPath(); g.arc(128,34,5,0,Math.PI*2); g.fill();
+    g.fillStyle=Q.bottom; g.fillRect(0,230,512,26);
+    const t=canvasTex(c); texCache[key]=t; return t;
+  }
   const hem=outfit==='battle'?160:174;
   g.fillStyle=Q.top; g.fillRect(0,0,512,hem);
   if(outfit==='battle'){
@@ -2357,13 +2374,15 @@ function makePompom(c1,c2,glow){
   return im;
 }
 function makeCheer(T,mem,lead){
-  const Q=T.squad, st=Q.style, f=makeRig(L_CHEER), skinHex='#EDC0A2', skin=M(skinHex,{roughness:.55});
+  // mem.casual: off-duty clothes (batting practice) in place of the squad's uniform
+  const CAS=mem&&mem.casual, OUTFIT=CAS?'casual':CHEER_OUTFIT;
+  const Q=CAS?Object.assign({},T.squad,{style:'cute',glow:false,bootH:'sneaker',boots:'#FAFAFA'},CAS):T.squad, st=Q.style, f=makeRig(L_CHEER), skinHex='#EDC0A2', skin=M(skinHex,{roughness:.55});
   f.root.scale.setScalar(0.99*(0.975+rnd()*0.05));
   f.springMul={lh:1.5,rh:1.5,le:1.3,re:1.3,hd:1,sp:.8,hr:.8,hx:.8,hy:1.3,hz:.8,lf:1.4,rf:1.4,lift:1.3};
   f.kind='cheer'; f.spring=(SPRING_STYLE[st]||[4.5,.55]).slice(); f.var={dt:(rnd()-.5)*0.07,amp:.88+rnd()*.24};
-  mesh(lathe([[.108,0],[.099,.05],[.093,.11],[.101,.17],[.117,.22],[.121,.26],[.111,.30],[.117,.335],[.128,.36],[.118,.395],[.055,.43]],28),new THREE.MeshStandardMaterial({map:cheerTorsoTex(T,Q,st,CHEER_OUTFIT),roughness:CHEER_OUTFIT==='battle'?.3:.55,metalness:CHEER_OUTFIT==='battle'?.35:0,emissive:Q.glow?col(Q.trim):0x000000,emissiveIntensity:Q.glow?.12:0}),f.spine,0,0,0,false);
+  mesh(lathe([[.108,0],[.099,.05],[.093,.11],[.101,.17],[.117,.22],[.121,.26],[.111,.30],[.117,.335],[.128,.36],[.118,.395],[.055,.43]],28),new THREE.MeshStandardMaterial({map:cheerTorsoTex(T,Q,st,OUTFIT),roughness:OUTFIT==='battle'?.3:.55,metalness:OUTFIT==='battle'?.35:0,emissive:Q.glow?col(Q.trim):0x000000,emissiveIntensity:Q.glow?.12:0}),f.spine,0,0,0,false);
   mesh(GEO.pelvis,M(Q.bottom),f.hips,0,0.0,0,false).scale.set(.9,.85,.78);
-  if(CHEER_OUTFIT==='battle'){
+  if(OUTFIT==='battle'){
     const strap=mesh(new THREE.TorusGeometry(0.075,0.013,6,20,Math.PI),M(Q.top,{roughness:.3,metalness:.35}),f.chest,0.1,0.0,0,false); strap.rotation.y=Math.PI/2;
     const belt=mesh(new THREE.TorusGeometry(0.104,0.012,6,32),M(Q.trim,{metalness:.6,roughness:.3}),f.hips,0,0.09,0,false); belt.rotation.x=Math.PI/2; belt.scale.set(1,0.8,1); }
   f.head.position.y=0.03; f.head.scale.set(.86,1,.95);
@@ -2375,6 +2394,7 @@ function makeCheer(T,mem,lead){
     mesh(GEO.eyeW,M('#FFFFFF',{roughness:.3}),f.head,s*0.034,0.152,0.084,false).scale.set(1.35,.95,.5);
     mesh(GEO.iris,M('#3A2418',{roughness:.2}),f.head,s*0.034,0.151,0.092,false).scale.set(1.05,1.15,.6);
     mesh(GEO.dot,M('#FFFFFF',{emissive:0xffffff}),f.head,s*0.031,0.157,0.098,false);
+    mesh(GEO.dot,M('#FFFFFF',{emissive:0xffffff}),f.head,s*0.037,0.145,0.0975,false).scale.setScalar(0.6);
     const ls=mesh(GEO.lash,M('#141010'),f.head,s*0.035,0.168,0.09,false); ls.rotation.z=-s*0.22; ls.scale.set(1.35,1.7,1);
     const br=mesh(GEO.brow,M(mem.hair),f.head,s*0.035,0.185,0.092,false); br.scale.set(.85,.8,1); br.rotation.z=-s*0.15;
     const bl=mesh(GEO.blush,M('#FF8A9A',{transparent:true,opacity:.45}),f.head,s*0.053,0.118,0.078,false); bl.rotation.y=s*0.55;
@@ -2403,12 +2423,12 @@ function makeCheer(T,mem,lead){
     mesh(GEO.cUpper,st==='hiphop'?M(Q.top):skin,f[s+'Sh'],0,-0.145,0,false);
     mesh(GEO.cFore,skin,f[s+'El'],0,-0.1225,0,false);
     mesh(GEO.jointS,skin,f[s+'El'],0,0,0,false).scale.setScalar(.72); mesh(GEO.jointS,skin,f[s+'Sh'],0,0,0,false).scale.setScalar(.85);
-    mesh(GEO.cuff,M(Q.trim,{emissive:Q.glow?col(Q.trim):0x000000}),f[s+'El'],0,-0.22,0,false).rotation.x=Math.PI/2;
+    if(!CAS) mesh(GEO.cuff,M(Q.trim,{emissive:Q.glow?col(Q.trim):0x000000}),f[s+'El'],0,-0.22,0,false).rotation.x=Math.PI/2;
     mesh(GEO.cHand,skin,f[s+'Hand'],0,0,0,false);
-    if(st!=='hiphop'&&CHEER_OUTFIT==='jersey'){ const sl=mesh(new THREE.CylinderGeometry(0.056,0.05,0.11,14),M(Q.top),f[s+'Sh'],0,-0.035,0,false); sl.scale.z=0.92;
+    if(st!=='hiphop'&&(OUTFIT==='jersey'||OUTFIT==='casual')){ const sl=mesh(new THREE.CylinderGeometry(0.056,0.05,0.11,14),M(Q.top),f[s+'Sh'],0,-0.035,0,false); sl.scale.z=0.92;
       mesh(new THREE.TorusGeometry(0.05,0.006,6,20),M(Q.trim),f[s+'Sh'],0,-0.09,0,false).rotation.x=Math.PI/2;
       mesh(new THREE.SphereGeometry(0.058,14,8,0,Math.PI*2,0,Math.PI/2),M(Q.top),f[s+'Sh'],0,0.0,0,false).scale.set(1,.7,.95); }
-    const pom=makePompom(Q.pom,Q.pom2,Q.glow); pom.position.y=-0.04; f[s+'Hand'].add(pom); f[s+'Pom']=pom;
+    if(!CAS){ const pom=makePompom(Q.pom,Q.pom2,Q.glow); pom.position.y=-0.04; f[s+'Hand'].add(pom); f[s+'Pom']=pom; }
     mesh(GEO.cThigh,skin,f[s+'Hip'],0,-0.225,0,false);
     mesh(GEO.cShin,skin,f[s+'Knee'],0,-0.215,0,false);
     mesh(GEO.jointS,skin,f[s+'Knee'],0,0,0,false).scale.setScalar(0.98);
@@ -2936,7 +2956,7 @@ function newGame(hi,ai,li,diff,attract,practice){
   drawAds(null);
   resetPositions();
   setMarquee(attract?'熱血應援棒球　FEVER BASEBALL　·　台灣職棒夜場　·　一起逆轉！':`${away.city}${away.name}　VS　${home.city}${home.name}　·　第七局開打！`);
-  if(practice){ setMarquee(`打擊練習　${home.city}${home.name}　·　無限打席，想打多久就打多久`); after(300,()=>{ popup('打擊練習',{sub:'無限打席・按右上 ⚙ 結束',color:'#FFD54A',size:60,dur:1600}); after(1700,startPA); }); }
+  if(practice){ setupPracticeSideline(); setMarquee(`打擊練習　${home.city}${home.name}　·　無限打席，想打多久就打多久`); after(300,()=>{ popup('打擊練習',{sub:'無限打席・按右上 ⚙ 結束',color:'#FFD54A',size:60,dur:1600}); after(1700,startPA); }); }
   else if(!attract) after(300,()=>startHalf());
 }
 function buildSquads(home,away){
@@ -3003,6 +3023,8 @@ function placeRunners(){
 /* ---------- half innings & plate appearances ---------- */
 function startHalf(){
   const side=batSide();
+  // warm up the stands' answers so the first call-and-response lands
+  ['衝！','加油！','三振！','好球！','安打！','全壘打！','得分！','開轟！','穩住！','守下來！','雙殺！','逆轉！',G.home.name+'！'].forEach(w=>{ try{ clipBuf(cKey(w)); }catch(e){} });
   if(G.line[side].length<G.inning) G.line[side].push(0);
   G.outs=0; G.bases=[0,0,0]; G.runners=[null,null,null];
   resetPositions();
@@ -3430,10 +3452,11 @@ function startPlay(EV,L,spray,p0,q){
   if(G.batterFig.mode!=='swing') setMode(G.batterFig,'swing',0.02);
   G.batDrop={t:0}; G.flash=1; G.fielders[0].yaw=0;
   impact(p0,q==null?.6:q,res,userBatting());
+  if(L>14&&EV>78&&!G.attract) sfx('swell');
   G.trailInit=false;
   if(userBatting()) G.board={a:'IN PLAY',b:'',c:G.home.hud};
 }
-function startFoul(p0,dir){ G.foul={t:0,p:p0.clone(),v:new V3(dir*(4+rnd()*6),8+rnd()*8,6+rnd()*6)}; }
+function startFoul(p0,dir){ G.foul={t:0,p:p0.clone(),v:new V3(dir*(4+rnd()*6),8+rnd()*8,6+rnd()*6)}; if(G.foul.v.y>12) crowdFx('ooh',.4); }
 
 /* =========================================================
    Count and outcomes
@@ -3509,16 +3532,19 @@ function showOutcome(o){
     if(o.res==='HR'){ G.fwT=3; sfx('roar'); setMarquee(`全壘打！全壘打！　${curBatter().name}！　${G.home.call}`); leaderShout(fillT(SHOUT_T.hr,{n:curBatter().short}),true); }
     else if(o.hit){ sfx('cheer'); leaderShout(o.runs?fillT(SHOUT_T.score,{tn:G.home.name}):fillT(SHOUT_T.hit,{n:curBatter().short}),true); }
     if(o.hit||o.res==='BB'||o.runs) setMood('jump',2400);
+    if(!o.hit&&!o.runs&&o.res!=='BB'&&o.res!=='K'&&!G.practice) sfx('groan');
   }else{
     if(o.res==='K'){ setMood('jump',1600); sfx('cheer'); girlSay('k',1900); }
-    else if(!o.hit&&o.res!=='BB'){ setMood('jump',1200); sfx('cheer'); }
+    else if(o.res==='HR'){ sfx('groan'); later(500,()=>sfx('groan')); }
+    else if(o.hit||o.runs) sfx('groan');
+    else if(o.res!=='BB'){ setMood('jump',1200); sfx('cheer'); }
   }
 }
 function fieldTeamHud(){ return (batSide()==='home'?G.away:G.home).hud; }
 function commitOutcome(o){
   const user=userBatting(), b=curBatter(), side=batSide(), d0=G.score.home-G.score.away;
   G.outs+=o.outs; G.bases=o.nb; G.runners=o.nr;
-  if(G.practice){ const S=G.practice; S.pa++; if(o.res==='HR') S.hr++; if(o.prac) S.far=Math.max(S.far||0,o.prac.carry); return; }
+  if(G.practice){ pracReact(o); const S=G.practice; S.pa++; if(o.res==='HR') S.hr++; if(o.prac) S.far=Math.max(S.far||0,o.prac.carry); return; }
   G.score[side]+=o.runs; G.line[side][G.inning-1]+=o.runs;
   if(o.hit) G.hits[side]++;
   if(o.res!=='BB') b.ab++;
@@ -3550,7 +3576,7 @@ function finishPA(o){
     return;
   }
   if(G.practice){ after(o.res==='K'?900:700,nextPA); return; }
-  if(o.res==='K'&&userBatting()){ sfx('ooh'); const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
+  if(o.res==='K'&&userBatting()){ sfx('groan'); const mad=rnd()<.55; setFace(G.batterFig,mad?'angry':'sad'); setFace(G.fielders[0],'happy');
     const ump=fn=>{ const lk=G.kLook; G.kLook=false; return lk?startCut('ump',1150,{},fn):fn(); };
     after(500,()=>ump(()=>startCut('react',1300,{f:G.batterFig,pose:mad?'helmet':'slump'},()=>startCut('kdance',1700,{side:'away',k:0,pitcher:curPitcher().name},nextPA)))); return; }
   after(1600,nextPA);
@@ -3798,6 +3824,74 @@ function updateUmps(dt){
   else drive(f,UMP_READY,dt);
 }
 /* =========================================================
+   Batting practice sideline: no cheer stage, no songs. Three of the home club's girls hang out by the
+   first-base dugout (two on a bench, one standing), watch the batter with bright eyes and cheer him on
+   in their own sweet voices: a good swing, a long one, a miss, his name.
+   ========================================================= */
+const PRAC_SIT=P({hy:-0.44,hz:-0.05,sp:[0.12,0,0],lf:[0.12,0.08,0.42],rf:[-0.12,0.08,0.42],lk:[0.12,0.5,1.2],rk:[-0.12,0.5,1.2],
+  lh:[0.1,0.62,0.3],rh:[-0.1,0.62,0.3],le:[0.3,0.75,0.1],re:[-0.3,0.75,0.1],hd:[0.05,0,0.06]});
+const PRAC_SIT_CHIN=P({hy:-0.44,hz:-0.05,sp:[0.28,0,0],lf:[0.12,0.08,0.42],rf:[-0.12,0.08,0.42],lk:[0.12,0.5,1.2],rk:[-0.12,0.5,1.2],
+  lh:[0.05,1.12,0.26],rh:[-0.05,1.12,0.26],le:[0.16,0.78,0.42],re:[-0.16,0.78,0.42],hd:[-0.1,0,0.1]});
+const PRAC_STAND=P({hy:-0.02,lf:[0.1,.08,0.02],rf:[-0.1,.08,-0.02],lh:[0.08,1.02,0.18],rh:[-0.08,1.02,0.18],le:[0.3,0.95,0.05],re:[-0.3,0.95,0.05],hd:[0.05,0,0.08]});
+const PRAC_CLAP=t=>{ const c=Math.abs(Math.sin(t*9)); return P({hy:-0.02,lf:[0.1,.08,0.02],rf:[-0.1,.08,-0.02],lh:[0.05+c*0.1,1.32,0.28],rh:[-0.05-c*0.1,1.32,0.28],le:[0.35,1.1,0.1],re:[-0.35,1.1,0.1],hd:[-0.1,0,0]}); };
+const PRAC_JUMP=t=>{ const u=Math.max(0,Math.sin(t*6)); return P({hy:-0.02,lift:u*0.25,lf:[0.12,.08+u*0.1,0.02],rf:[-0.12,.08+u*0.1,-0.02],lh:[0.2,1.95,0.1],rh:[-0.2,1.95,0.1],le:[0.45,1.6,-0.1],re:[-0.45,1.6,-0.1],hd:[-0.25,0,0]}); };
+const PRAC_LINES={hit:['好球～！','打得好～！','漂亮～！','好棒喔～！'],far:['哇～飛好遠！','好有力喔～！'],hr:['全壘打～！好帥喔！','哇～飛出去了～！'],
+  miss:['沒關係～下一球！','加油加油～！','差一點點～！'],idle:['加油喔～！','我們在這邊看你喔～！','慢慢來～加油！']};
+
+function setupPracticeSideline(){
+  const T=G.home, girls=G.sq.home.girls.slice(0,3), base=polar(97,16.5), yaw=Math.atan2(-base.x,-base.z);
+  const side=new V3(Math.cos(yaw),0,-Math.sin(yaw));   // along the bench
+  const bench=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.42,0.5),new THREE.MeshStandardMaterial({color:0x3a4060,roughness:.7}));
+  bench.position.copy(base).addScaledVector(new V3(Math.sin(yaw),0,Math.cos(yaw)),-0.15); bench.position.y=0.21; bench.rotation.y=yaw; bench.castShadow=true; S3.figRoot.add(bench);
+  G.prac={girls:[],t:0,react:null,said:-9e9,base,yaw};
+  // off duty: sweet everyday clothes, pastel knits and light skirts, white sneakers; no pom-poms
+  const PAL=[{top:'#F7C6D9',trim:'#FFFFFF',bottom:'#FFFFFF'},{top:'#FFF1DC',trim:'#F29BB5',bottom:'#F6D3E0'},{top:'#CFE2F7',trim:'#FFFFFF',bottom:'#F4F4F8'}];
+  girls.forEach((g,i)=>{ const f=makeCheer(T,{hair:g.hair,hs:g.hs,casual:PAL[i%PAL.length]},false); S3.figRoot.add(f.root);
+    const p=base.clone().addScaledVector(side,(i-1)*0.85); f.yaw=yaw; f.baseY=0; f.root.position.copy(p); f.mode='prac'; f.mt=0; f.from=null; f.spr=null;
+    f.pracSit=i!==1; f.name=g.name; f.ph=i*1.7; G.prac.girls.push(f); });
+  S3.pracCam=S3.pracCam||new THREE.PerspectiveCamera(30,2,0.1,300);
+}
+// a girl says something: her sweet take if it was recorded, the words on screen either way
+function pracSay(kind,name){
+  const P=G.prac; if(!P||G.clock-P.said<1500) return; P.said=G.clock;
+  const L=PRAC_LINES[kind]||PRAC_LINES.idle, b=curBatter(), useName=name&&rnd()<0.45, t=useName?`${b.short}好帥～！`:pick(L);
+  const g=P.girls[Math.floor(rnd()*P.girls.length)];
+  G.shout={txt:t,t:0,who:g?g.name.slice(-2):'啦啦隊',pink:true};
+  const c=VP.map['G'+voiceKey(t)];
+  if(c&&AU.ctx&&AU.on&&SAVE.settings.voice!==false&&SAVE.settings.aiVoice!==false){ const go=buf=>{ c.buf=buf; const s=AU.ctx.createBufferSource(), gn=AU.ctx.createGain(); s.buffer=buf; gn.gain.value=1.3; s.connect(gn).connect(AU.master); s.start(); };
+    if(c.buf) go(c.buf); else AU.ctx.decodeAudioData(c.ab.slice(c.off,c.off+c.len)).then(go).catch(()=>{}); }
+}
+// how they take a result: claps for a good one, everyone up and jumping for a home run, a shrug and a "next one" for a miss
+function pracReact(o){
+  const P=G.prac; if(!P) return;
+  const big=o.res==='HR', far=o.prac&&o.prac.carry>=90, good=big||far||(o.prac&&o.prac.carry>=60&&o.prac.L>=8);
+  P.react={kind:big?'hr':good?'hit':'miss',t0:G.clock};
+  later(big?900:500,()=>pracSay(big?'hr':far?'far':good?'hit':'miss',good));
+}
+function updatePracticeSideline(dt){
+  const P=G.prac; if(!P) return; P.t+=dt;
+  const bp=G.batterFig?G.batterFig.root.position:new V3(0,0,0), R=P.react, k=R?(G.clock-R.t0)/1000:9;
+  if(R&&k>(R.kind==='hr'?3.2:2)) P.react=null;
+  P.girls.forEach((f,i)=>{
+    // eyes on the batter
+    f.yaw=Math.atan2(bp.x-f.root.position.x,bp.z-f.root.position.z);
+    let p;
+    if(R&&R.kind==='hr') p=PRAC_JUMP(k+i*0.15);
+    else if(R&&R.kind==='hit'&&k<1.6) p=f.pracSit&&i===0?PRAC_SIT:PRAC_CLAP(k+i*0.1);
+    else if(f.pracSit) p=Math.sin(P.t*0.25+f.ph)>0.4?PRAC_SIT_CHIN:PRAC_SIT;
+    else p=Object.assign({},PRAC_STAND,{hx:Math.sin(P.t*1.3+f.ph)*0.02,hd:[0.05,Math.sin(P.t*0.6)*0.1,0.08]});
+    drive(f,p,dt);
+  });
+  // now and then, a little encouragement while he waits
+  if(G.phase==='windup'&&G.clock-P.said>14000&&rnd()<0.01) pracSay('idle');
+}
+// the bottom panel in practice: the girls by the dugout with the field behind them
+function pracCamFrame(aspect){
+  const P=G.prac, c=S3.pracCam, b=P.base, yaw=P.yaw, fw=new V3(Math.sin(yaw),0,Math.cos(yaw));
+  c.aspect=aspect; c.fov=aspect>2.2?24:30; c.updateProjectionMatrix();
+  c.position.copy(b).addScaledVector(fw,3.9).add(new V3(0,1.2,0)); c.lookAt(b.x,0.98,b.z); return c;
+}
+/* =========================================================
    Per-frame update
    ========================================================= */
 function update(dt){
@@ -3931,7 +4025,7 @@ function updatePlay(dt){
       const u=(t-cur.at)/cur.dur; pl.ballPos.copy(cur.from3).lerp(to,u); pl.ballPos.y+=Math.sin(u*Math.PI)*Math.min(3.5,cur.dur*2);
     }else{
       let holder=ev.k;
-      th.forEach(x=>{ if(t>=x.at+x.dur){ holder=x.to; if(!x.caught){ x.caught=true; sfx('mitt'); if(x.call&&!pl.replay) popup(x.call,{size:30,color:x.call==='OUT'?'#FF8A8A':'#7CFF8A',y:300,dur:700}); } } });
+      th.forEach(x=>{ if(t>=x.at+x.dur){ holder=x.to; if(!x.caught){ x.caught=true; sfx('mitt'); if(x.call&&!pl.replay&&pl.plan.hl&&pl.plan.hl.type==='close') sfx('gasp'); if(x.call&&!pl.replay) popup(x.call,{size:30,color:x.call==='OUT'?'#FF8A8A':'#7CFF8A',y:300,dur:700}); } } });
       pl.ballPos.copy(handPos(F[holder],false));
     }
   }else pl.ballPos.copy(trajAt(pl.tr,t));
@@ -4151,7 +4245,7 @@ function slideDust(f,n,big){
 const UPV=new V3(0,1,0);
 function updateFigures(dt){
   if(G.cer) return;  // the MVP is posed by the ceremony
-  updateCatcher(dt); updateUmps(dt);
+  updateCatcher(dt); updateUmps(dt); if(G.practice) updatePracticeSideline(dt);
   const pl=G.play, F=G.fielders||[];
   F.forEach((f,i)=>{
     if(!f.root.visible&&!(i===0&&G.show)) return;
@@ -4690,7 +4784,7 @@ function render(){
     if(!LAYOUT.land){ const eB=LAYOUT.tall?LAYOUT.stageExt:0, sh=ST1-ST0+eB, sa=W/sh, sk=sh/(ST1-ST0);
       if(Math.abs(stCam.aspect-sa)>1e-4){ stCam.aspect=sa; stCam.fov=2*Math.atan(Math.tan(13*D2R)*sk)/D2R; stCam.updateProjectionMatrix(); }
       const c=cssRect({x:0,y:ST0,w:W,h:sh},LAYOUT.tall?'bottom':null); renderer.setViewport(c.x,cssH-c.y-c.h,c.w,c.h); renderer.setScissor(c.x,cssH-c.y-c.h,c.w,c.h);
-      renderer.render(stScene,stCam); }
+      if(G.practice&&G.prac) renderer.render(scene,pracCamFrame(c.w/c.h)); else renderer.render(stScene,stCam); }
     else if(S3.squads&&!stageView&&G.phase!=='lucky'&&LAYOUT.ctl.squad.h>40){
       const q=LAYOUT.ctl.squad, a=q.w/q.h, tn=Math.tan(13*D2R), Q=S3.squads[stageSide()], vis=Q.members.filter(f=>f.slot!==5);
       let x0=1e9,x1=-1e9,zc=0; vis.forEach(f=>{ x0=Math.min(x0,f.root.position.x); x1=Math.max(x1,f.root.position.x); zc+=f.root.position.z; }); zc/=vis.length;
@@ -4703,7 +4797,7 @@ function render(){
       const hide=[Q.mascot.root,...Q.members.filter(f=>f.slot===5).map(f=>f.root)]; hide.forEach(o=>o.visible=false);
       renderer.setViewport(q.x,cssH-q.y-q.h,q.w,q.h); renderer.setScissor(q.x,cssH-q.y-q.h,q.w,q.h);
       const bg=stScene.background, fg=stScene.fog; stScene.background=null; stScene.fog=null; S3.stBackdrop.forEach(o=>o.visible=false);
-      renderer.autoClear=false; renderer.clearDepth(); renderer.render(stScene,landStCam); renderer.autoClear=true;
+      renderer.autoClear=false; renderer.clearDepth(); if(G.practice&&G.prac) renderer.render(scene,pracCamFrame(a)); else renderer.render(stScene,landStCam); renderer.autoClear=true;
       stScene.background=bg; stScene.fog=fg; S3.stBackdrop.forEach(o=>o.visible=true); hide.forEach(o=>o.visible=true);
     }
   }
@@ -4991,8 +5085,8 @@ function drawShout(){
   ctx.globalAlpha=Math.max(0,a);
   ctx.font=`900 18px ${FONT_TC}`; const w=Math.min(W-40,ctx.measureText(s.txt).width+92);
   ctx.fillStyle='rgba(7,8,26,.82)'; rr((W-w)/2,FT+50,w,38,19); ctx.fill();
-  ctx.fillStyle='#FF3D7F'; rr((W-w)/2+6,FT+56,52,26,13); ctx.fill();
-  txt('團長',(W-w)/2+32,FT+69,14,'#fff');
+  ctx.fillStyle=s.pink?'#FF8FC0':'#FF3D7F'; rr((W-w)/2+6,FT+56,52,26,13); ctx.fill();
+  txt(s.who||'團長',(W-w)/2+32,FT+69,14,'#fff');
   txt(s.txt,(W-w)/2+66,FT+69,18,'#fff',{a:'left'});
   ctx.globalAlpha=1;
 }
@@ -6095,7 +6189,7 @@ function musicMode(){
   const H=G.home, A=G.away;
   if(G.attract) return {key:'title'+H.id,song:songFor('anthem',null,H),vol:.45};
   if(G.cer) return {key:'cer'+G.cer.T.id,song:songFor('anthem',null,G.cer.T),vol:1};
-  if(G.practice) return {key:'prac'+H.id,song:songFor('anthem',null,H),vol:.32};
+  if(G.practice) return null;   // practice: no songs, just the park and the girls
   if(G.over) return G.score.home>G.score.away?{key:'win',song:songFor('win',null,H),vol:1}:null;
   if(G.phase==='trot') return {key:'trot'+batTeam().id,song:songFor('win',null,batTeam()),vol:1};
   if(G.show&&G.show.big) return {key:'closer'+G.show.T.id,song:songFor('closer',null,G.show.T),vol:1};
@@ -6191,7 +6285,7 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(!ren
 </style>
 <script>
 (function(){
-  const BUILD='20261011115753', box=document.getElementById('upd');
+  const BUILD='20261011121447', box=document.getElementById('upd');
   const go=b=>{ location.replace(location.pathname+'?v='+encodeURIComponent(b)); };
   async function check(){
     try{
